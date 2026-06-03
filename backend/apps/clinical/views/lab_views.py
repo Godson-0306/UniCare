@@ -77,6 +77,31 @@ class LabQueueView(APIView):
         }
 
 
+class LabRequestDetailView(APIView):
+    permission_classes = [IsLabTechnician]
+
+    def get(self, request, request_id):
+        lab_request = (
+            LabRequest.objects.select_related("visit", "visit__student", "performed_by", "result")
+            .prefetch_related(Prefetch("tests", queryset=LabRequestTest.objects.select_related("performed_by").order_by("created_at")))
+            .get(id=request_id)
+        )
+        return Response({"success": True, "data": LabRequestSerializer(lab_request).data})
+
+
+class StudentLabHistoryView(APIView):
+    permission_classes = [IsLabTechnician]
+
+    def get(self, request, student_id):
+        requests = (
+            LabRequest.objects.filter(visit__student_id=student_id)
+            .select_related("visit", "visit__student", "performed_by", "result")
+            .prefetch_related(Prefetch("tests", queryset=LabRequestTest.objects.select_related("performed_by").order_by("created_at")))
+            .order_by("-requested_at")[:100]
+        )
+        return Response({"success": True, "data": LabRequestSerializer(requests, many=True).data})
+
+
 class UploadLabResultView(APIView):
     permission_classes = [IsLabTechnician]
 
@@ -123,7 +148,10 @@ class SaveLabTestResultView(APIView):
             lab_test=lab_test,
             result_value=serializer.validated_data.get("result_value", ""),
             reference_range=serializer.validated_data.get("reference_range", ""),
+            interpretation=serializer.validated_data.get("interpretation", ""),
+            technician_notes=serializer.validated_data.get("technician_notes", ""),
             comments=serializer.validated_data.get("comments", ""),
+            attachment=request.FILES.get("attachment"),
             status=serializer.validated_data.get("status", "completed"),
             performed_by=request.user,
         )

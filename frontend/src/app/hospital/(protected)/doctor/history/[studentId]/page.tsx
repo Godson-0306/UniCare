@@ -88,7 +88,10 @@ export default function DoctorPatientHistoryPage() {
   });
 
   useEffect(() => {
-    void loadHistory();
+    const timer = window.setTimeout(() => {
+      void loadHistory();
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [studentId]);
 
   const student = history[0]?.student;
@@ -193,7 +196,7 @@ function HistoryModal({ visit, timeline, onClose }: { visit: VisitDetail; timeli
               <div key={`${item.kind}-${index}`} className="rounded-md border border-slate-200 p-3 text-sm">
                 <p className="font-semibold text-slate-900">{item.title}</p>
                 <p className="text-xs text-teal-700">{item.kind} · {item.status} · {formatDateTime(item.timestamp)}</p>
-                {item.details?.summary && <p className="mt-2 whitespace-pre-line text-slate-600">{String(item.details.summary)}</p>}
+                {typeof item.details?.summary !== "undefined" && <p className="mt-2 whitespace-pre-line text-slate-600">{String(item.details.summary)}</p>}
               </div>
             ))}
           </section>

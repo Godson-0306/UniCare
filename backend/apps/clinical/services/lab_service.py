@@ -84,15 +84,22 @@ class LabService:
         lab_test: LabRequestTest,
         result_value: str,
         reference_range: str = "",
+        interpretation: str = "",
+        technician_notes: str = "",
         comments: str = "",
+        attachment=None,
         status: str = LabTestStatus.COMPLETED,
         performed_by,
         finalize: bool = True,
     ) -> LabRequestTest:
         lab_test.result_value = result_value
         lab_test.reference_range = reference_range
+        lab_test.interpretation = interpretation
+        lab_test.technician_notes = technician_notes
         lab_test.comments = comments
         lab_test.status = status
+        if attachment:
+            lab_test.attachment = attachment
         lab_test.completed_at = timezone.now() if status == LabTestStatus.COMPLETED else None
         lab_test.performed_by = performed_by
         lab_test.save()
@@ -147,6 +154,8 @@ class LabService:
                     lab_test=lab_test,
                     result_value=item.get("result_value", ""),
                     reference_range=item.get("reference_range", ""),
+                    interpretation=item.get("interpretation", ""),
+                    technician_notes=item.get("technician_notes", ""),
                     comments=item.get("comments", ""),
                     status=item.get("status", LabTestStatus.COMPLETED),
                     performed_by=performed_by,
@@ -272,6 +281,8 @@ class LabService:
                         test.test_name,
                         f"Result: {test.result_value or 'Not provided'}",
                         f"Reference: {test.reference_range or 'N/A'}",
+                        f"Interpretation: {test.interpretation or 'N/A'}",
+                        f"Technician Notes: {test.technician_notes or 'N/A'}",
                         f"Comments: {test.comments or 'N/A'}",
                     ]
                 )

@@ -112,7 +112,10 @@ class LabRequestTest(UUIDPrimaryKeyModel, AuditableModel):
     test_code = models.CharField(max_length=64, blank=True)
     result_value = models.TextField(blank=True)
     reference_range = models.CharField(max_length=200, blank=True)
+    interpretation = models.TextField(blank=True)
+    technician_notes = models.TextField(blank=True)
     comments = models.TextField(blank=True)
+    attachment = models.FileField(upload_to="lab_tests/%Y/%m/", blank=True)
     status = models.CharField(
         max_length=16,
         choices=LabTestStatus.choices,

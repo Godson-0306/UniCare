@@ -42,6 +42,8 @@ class UploadLabResultSerializer(serializers.Serializer):
 class SaveLabTestResultSerializer(serializers.Serializer):
     result_value = serializers.CharField(required=False, allow_blank=True, default="")
     reference_range = serializers.CharField(required=False, allow_blank=True, default="")
+    interpretation = serializers.CharField(required=False, allow_blank=True, default="")
+    technician_notes = serializers.CharField(required=False, allow_blank=True, default="")
     comments = serializers.CharField(required=False, allow_blank=True, default="")
     status = serializers.ChoiceField(
         choices=LabRequestTest._meta.get_field("status").choices,
@@ -140,14 +142,18 @@ class PrescriptionDetailSerializer(serializers.ModelSerializer):
 
 
 class LabRequestSerializer(serializers.ModelSerializer):
+    student = serializers.SerializerMethodField()
     student_name = serializers.CharField(source="visit.student.full_name", read_only=True)
     matric_number = serializers.CharField(source="visit.student.matric_number", read_only=True)
     student_id = serializers.UUIDField(source="visit.student.id", read_only=True)
     visit = serializers.UUIDField(source="visit.id", read_only=True)
     visit_number = serializers.CharField(source="visit.visit_number", read_only=True)
     requested_by = serializers.SerializerMethodField()
+    priority = serializers.SerializerMethodField()
     test_count = serializers.SerializerMethodField()
     completed_test_count = serializers.SerializerMethodField()
+    result_summary = serializers.SerializerMethodField()
+    result_file_url = serializers.SerializerMethodField()
     tests = serializers.SerializerMethodField()
 
     class Meta:
@@ -160,6 +166,8 @@ class LabRequestSerializer(serializers.ModelSerializer):
             "test_name",
             "test_code",
             "status",
+            "priority",
+            "student",
             "student_id",
             "student_name",
             "matric_number",
@@ -169,14 +177,33 @@ class LabRequestSerializer(serializers.ModelSerializer):
             "clinical_notes",
             "requested_at",
             "completed_at",
+            "result_summary",
+            "result_file_url",
             "tests",
         )
+
+    def get_student(self, obj):
+        student = obj.visit.student
+        return {
+            "id": str(student.id),
+            "full_name": student.full_name,
+            "matric_number": student.matric_number,
+            "date_of_birth": student.date_of_birth,
+            "gender": student.gender,
+            "blood_group": student.blood_group,
+            "department": student.department,
+            "faculty": student.faculty,
+            "level": student.level,
+        }
 
     def get_requested_by(self, obj):
         if not obj.performed_by:
             return ""
         full_name = obj.performed_by.get_full_name()
         return full_name or obj.performed_by.username
+
+    def get_priority(self, obj):
+        return "urgent" if "(urgent)" in obj.clinical_notes.lower() else "routine"
 
     def get_test_count(self, obj):
         prefetched_tests = getattr(obj, "_prefetched_objects_cache", {}).get("tests")
@@ -193,9 +220,20 @@ class LabRequestSerializer(serializers.ModelSerializer):
     def get_tests(self, obj):
         return LabRequestTestSerializer(obj.tests.all(), many=True).data
 
+    def get_result_summary(self, obj):
+        result = getattr(obj, "result", None)
+        return result.result_summary if result else ""
+
+    def get_result_file_url(self, obj):
+        result = getattr(obj, "result", None)
+        if result and result.result_file:
+            return result.result_file.url
+        return ""
+
 
 class LabRequestTestSerializer(serializers.ModelSerializer):
     performed_by_name = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
 
     class Meta:
         model = LabRequestTest
@@ -205,7 +243,10 @@ class LabRequestTestSerializer(serializers.ModelSerializer):
             "test_code",
             "result_value",
             "reference_range",
+            "interpretation",
+            "technician_notes",
             "comments",
+            "attachment_url",
             "status",
             "completed_at",
             "performed_by_name",
@@ -218,3 +259,6 @@ class LabRequestTestSerializer(serializers.ModelSerializer):
             return ""
         full_name = obj.performed_by.get_full_name()
         return full_name or obj.performed_by.username
+
+    def get_attachment_url(self, obj):
+        return obj.attachment.url if obj.attachment else ""
