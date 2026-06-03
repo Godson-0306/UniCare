@@ -3,8 +3,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.appointments.models import Appointment
+from apps.audit.services import AuditService
 from apps.clinical.models import LabResult, Prescription, StudentMedicalRecord
 from apps.clinical.serializers import StudentMedicalRecordSerializer
+from apps.clinical.services.timeline_service import TimelineService
 from apps.core.permissions import IsStudent
 from apps.emergency.services import EmergencyService
 from apps.notifications.models import Notification
@@ -28,6 +30,12 @@ class StudentPrescriptionsView(StudentBaseView):
             .select_related("visit")
             .prefetch_related("items")
             .order_by("-created_at")[:50]
+        )
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_prescriptions",
+            entity_id=str(profile.id),
+            metadata={"count": prescriptions.count()},
         )
         data = [
             {
@@ -54,15 +62,37 @@ class StudentPrescriptionsView(StudentBaseView):
 class StudentLabResultsView(StudentBaseView):
     def get(self, request):
         profile = self.get_student_profile(request)
-        results = LabResult.objects.filter(visit__student=profile).select_related("lab_request").order_by("-released_at")
+        results = (
+            LabResult.objects.filter(visit__student=profile)
+            .select_related("lab_request")
+            .prefetch_related("lab_request__tests")
+            .order_by("-released_at")
+        )
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_lab_results",
+            entity_id=str(profile.id),
+            metadata={"count": results.count()},
+        )
         data = [
             {
                 "id": str(r.id),
+                "request_number": r.lab_request.request_number,
                 "test_name": r.lab_request.test_name,
                 "result_summary": r.result_summary,
                 "is_abnormal": r.is_abnormal,
                 "released_at": r.released_at,
                 "file_url": r.result_file.url if r.result_file else None,
+                "tests": [
+                    {
+                        "test_name": test.test_name,
+                        "result_value": test.result_value,
+                        "reference_range": test.reference_range,
+                        "comments": test.comments,
+                        "completed_at": test.completed_at,
+                    }
+                    for test in r.lab_request.tests.all()
+                ],
             }
             for r in results
         ]
@@ -73,6 +103,12 @@ class StudentAppointmentsView(StudentBaseView):
     def get(self, request):
         profile = self.get_student_profile(request)
         appointments = Appointment.objects.filter(student=profile).order_by("-scheduled_at")
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_appointments",
+            entity_id=str(profile.id),
+            metadata={"count": appointments.count()},
+        )
         data = [
             {
                 "id": str(a.id),
@@ -112,6 +148,12 @@ class StudentMedicalHistoryView(StudentBaseView):
     def get(self, request):
         profile = self.get_student_profile(request)
         visits = Visit.objects.filter(student=profile).select_related("consultation").order_by("-registered_at")[:30]
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_medical_history",
+            entity_id=str(profile.id),
+            metadata={"count": visits.count()},
+        )
         return Response({"success": True, "data": VisitDetailSerializer(visits, many=True).data})
 
 
@@ -122,6 +164,12 @@ class StudentMedicalProfileView(StudentBaseView):
             StudentMedicalRecord.objects.filter(student=profile, is_active=True)
             .select_related("visit", "performed_by")
             .order_by("-diagnosed_at", "-created_at")
+        )
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_medical_profile",
+            entity_id=str(profile.id),
+            metadata={"count": records.count()},
         )
         grouped = {
             "allergies": [],
@@ -191,3 +239,14 @@ class StudentEmergencyView(StudentBaseView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class StudentTimelineView(StudentBaseView):
+    def get(self, request):
+        profile = self.get_student_profile(request)
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_timeline",
+            entity_id=str(profile.id),
+        )
+        return Response({"success": True, "data": TimelineService.build_for_student(profile)})

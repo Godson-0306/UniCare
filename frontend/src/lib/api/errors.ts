@@ -2,10 +2,18 @@ import axios from "axios";
 
 import type { ApiErrorResponse } from "@/types/api";
 
-export function getApiErrorMessage(error: unknown, fallback = "Something went wrong. Please try again."): string {
+interface ApiErrorMessageOptions {
+  authOperation?: boolean;
+}
+
+export function getApiErrorMessage(
+  error: unknown,
+  fallback = "Something went wrong. Please try again.",
+  options: ApiErrorMessageOptions = {}
+): string {
   if (axios.isAxiosError(error)) {
     if (!error.response) {
-      return "Cannot reach the UniCare server. Start the backend with: python manage.py runserver";
+      return `${fallback} Cannot reach the UniCare server.`;
     }
     const data = error.response.data as ApiErrorResponse | { detail?: string };
     if (typeof data === "object" && data !== null) {
@@ -20,10 +28,13 @@ export function getApiErrorMessage(error: unknown, fallback = "Something went wr
       }
     }
     if (error.response.status === 401) {
-      return "Invalid user ID or password.";
+      return options.authOperation ? "Invalid user ID or password." : "Authentication session expired. Please sign in again.";
+    }
+    if (error.response.status === 403) {
+      return "You do not have permission to perform this action.";
     }
     if (error.response.status >= 500) {
-      return "Server error during sign in. Ensure the backend is running (python manage.py runserver).";
+      return fallback;
     }
   }
   return fallback;

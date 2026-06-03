@@ -48,7 +48,7 @@ export default function LoginPage() {
       setSession(session, portal);
       router.replace(destination);
     } catch (err) {
-      setError(getApiErrorMessage(err));
+      setError(getApiErrorMessage(err, "Unable to sign in.", { authOperation: true }));
     } finally {
       setLoading(false);
     }

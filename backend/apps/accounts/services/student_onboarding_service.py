@@ -1,5 +1,7 @@
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from django.db.utils import IntegrityError
+from rest_framework import serializers
 
 from apps.accounts.constants import AccountType, Role
 from apps.accounts.models import StudentProfile, User
@@ -30,32 +32,38 @@ class StudentOnboardingService:
     ) -> StudentProfile:
         matric = matric_number.strip().upper()
         validate_password(password)
-
-        user = User.objects.create_user(
-            username=matric,
-            password=password,
-            first_name=first_name.strip(),
-            last_name=last_name.strip(),
-            email=email.strip(),
-            phone_number=phone_number.strip(),
-            role=Role.STUDENT,
-            account_type=AccountType.STUDENT,
-        )
-        profile = StudentProfile.objects.create(
-            user=user,
-            matric_number=matric,
-            first_name=first_name.strip(),
-            last_name=last_name.strip(),
-            other_names=other_names.strip(),
-            faculty=faculty.strip(),
-            department=department.strip(),
-            level=level.strip(),
-            date_of_birth=date_of_birth,
-            gender=gender.strip(),
-            emergency_contact_name=emergency_contact_name.strip(),
-            emergency_contact_phone=emergency_contact_phone.strip(),
-            medical_notes=medical_notes.strip(),
-        )
+        try:
+            user = User.objects.create_user(
+                username=matric,
+                password=password,
+                first_name=first_name.strip(),
+                last_name=last_name.strip(),
+                email=email.strip().lower(),
+                phone_number=phone_number.strip(),
+                role=Role.STUDENT,
+                account_type=AccountType.STUDENT,
+            )
+            profile, _ = StudentProfile.objects.update_or_create(
+                user=user,
+                defaults={
+                    "matric_number": matric,
+                    "first_name": first_name.strip(),
+                    "last_name": last_name.strip(),
+                    "other_names": other_names.strip(),
+                    "faculty": faculty.strip(),
+                    "department": department.strip(),
+                    "level": level.strip(),
+                    "date_of_birth": date_of_birth,
+                    "gender": gender.strip(),
+                    "emergency_contact_name": emergency_contact_name.strip(),
+                    "emergency_contact_phone": emergency_contact_phone.strip(),
+                    "medical_notes": medical_notes.strip(),
+                },
+            )
+        except IntegrityError as exc:
+            raise serializers.ValidationError(
+                {"matric_number": ["Student registration failed because this matric number already exists."]}
+            ) from exc
         AuditService.log(
             action="student_registered",
             entity_type="student_profile",

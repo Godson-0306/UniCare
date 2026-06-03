@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.clinical.models import LabRequest, LabResult, Prescription, PrescriptionItem, TreatmentSchedule
+from apps.clinical.models import LabRequest, LabRequestTest, LabResult, Prescription, PrescriptionItem, TreatmentSchedule
 
 
 class PrescriptionItemInline(admin.TabularInline):
@@ -15,5 +15,6 @@ class PrescriptionAdmin(admin.ModelAdmin):
 
 
 admin.site.register(LabRequest)
+admin.site.register(LabRequestTest)
 admin.site.register(LabResult)
 admin.site.register(TreatmentSchedule)

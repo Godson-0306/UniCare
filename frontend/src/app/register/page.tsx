@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
+import { getApiErrorMessage } from "@/lib/api/errors";
 
 const initialForm = {
   first_name: "",
@@ -30,6 +31,7 @@ const initialForm = {
 export default function RegisterPage() {
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof typeof initialForm, string>>>({});
   const [loading, setLoading] = useState(false);
 
   function updateField(field: keyof typeof initialForm, value: string) {
@@ -40,6 +42,7 @@ export default function RegisterPage() {
     event.preventDefault();
     setLoading(true);
     setStatus("");
+    setFieldErrors({});
 
     try {
       const { data } = await apiClient.post("/auth/student/register/", form);
@@ -48,11 +51,26 @@ export default function RegisterPage() {
         setStatus(`Registration successful for ${data.data.matric_number}. You can sign in now.`);
       }
     } catch (error) {
-      const message =
+      const details =
         error && typeof error === "object" && "response" in error
-          ? (error as { response?: { data?: { error?: { message?: string } } } }).response?.data?.error?.message
+          ? (
+              error as {
+                response?: {
+                  data?: { error?: { details?: Record<string, string[] | string> } };
+                };
+              }
+            ).response?.data?.error?.details
           : undefined;
-      setStatus(message ?? "Registration failed. Please review your details and try again.");
+      if (details && typeof details === "object") {
+        const nextErrors: Partial<Record<keyof typeof initialForm, string>> = {};
+        for (const [key, value] of Object.entries(details)) {
+          if (key in initialForm) {
+            nextErrors[key as keyof typeof initialForm] = Array.isArray(value) ? String(value[0]) : String(value);
+          }
+        }
+        setFieldErrors(nextErrors);
+      }
+      setStatus(getApiErrorMessage(error, "Registration failed. Please review your details and try again."));
     } finally {
       setLoading(false);
     }
@@ -97,6 +115,7 @@ export default function RegisterPage() {
                   placeholder={placeholder}
                   onChange={(event) => updateField(field, event.target.value)}
                 />
+                {fieldErrors[field] && <p className="text-xs text-red-700">{fieldErrors[field]}</p>}
               </div>
             ))}
             <div className="space-y-2 md:col-span-2">
@@ -108,12 +127,13 @@ export default function RegisterPage() {
                 value={form.medical_notes}
                 onChange={(event) => updateField("medical_notes", event.target.value)}
               />
+              {fieldErrors.medical_notes && <p className="text-xs text-red-700">{fieldErrors.medical_notes}</p>}
             </div>
             <Button type="submit" className="md:col-span-2" disabled={loading}>
               {loading ? "Submitting..." : "Create account"}
             </Button>
           </form>
-          {status && <p className="text-sm text-slate-700">{status}</p>}
+          {status && <p className={`text-sm ${status.toLowerCase().includes("successful") ? "text-teal-700" : "text-red-700"}`}>{status}</p>}
           <Button type="button" variant="outline" className="w-full" asChild>
             <Link href="/login">Back to sign in</Link>
           </Button>

@@ -1,6 +1,18 @@
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 
+STAFF_NOTIFICATION_ROLES = {
+    "receptionist",
+    "nurse",
+    "doctor",
+    "pharmacist",
+    "lab_technician",
+    "duty_officer",
+    "admin",
+    "super_admin",
+}
+
+
 class NotificationConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get("user")
@@ -8,7 +20,7 @@ class NotificationConsumer(AsyncJsonWebsocketConsumer):
             await self.close()
             return
         self.group_names = [f"user_{user.id}"]
-        if hasattr(user, "workstation_profile") or user.role in {"admin", "super_admin"}:
+        if user.role in STAFF_NOTIFICATION_ROLES:
             self.group_names.extend(["hospital_staff", f"role_{user.role}"])
         for group_name in self.group_names:
             await self.channel_layer.group_add(group_name, self.channel_name)

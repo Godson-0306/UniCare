@@ -23,6 +23,13 @@ class EmergencyEvent(UUIDPrimaryKeyModel, AuditableModel):
         blank=True,
         related_name="emergency_events",
     )
+    assigned_workstation = models.ForeignKey(
+        "accounts.WorkstationAccount",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="assigned_emergency_events",
+    )
     status = models.CharField(
         max_length=16,
         choices=EmergencyStatus.choices,
@@ -36,6 +43,7 @@ class EmergencyEvent(UUIDPrimaryKeyModel, AuditableModel):
     dial_triggered = models.BooleanField(default=False)
     dial_triggered_at = models.DateTimeField(null=True, blank=True)
     priority_override = models.BooleanField(default=True)
+    assigned_at = models.DateTimeField(null=True, blank=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:

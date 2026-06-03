@@ -15,6 +15,13 @@ class LabRequestStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
+class LabTestStatus(models.TextChoices):
+    PENDING = "pending", "Pending"
+    IN_PROGRESS = "in_progress", "In Progress"
+    COMPLETED = "completed", "Completed"
+    CANCELLED = "cancelled", "Cancelled"
+
+
 class TreatmentScheduleType(models.TextChoices):
     MEDICATION = "medication", "Medication"
     INJECTION = "injection", "Injection"

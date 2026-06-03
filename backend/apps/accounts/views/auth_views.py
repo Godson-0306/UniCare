@@ -1,8 +1,11 @@
+import logging
+
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework import serializers
 
 from apps.accounts.serializers import (
     AdminLoginSerializer,
@@ -15,6 +18,8 @@ from apps.accounts.serializers import (
 )
 from apps.accounts.services.auth_service import AuthService, AuthenticationError
 from apps.accounts.services.student_onboarding_service import StudentOnboardingService
+
+logger = logging.getLogger(__name__)
 
 
 def _login_response(result: dict) -> Response:
@@ -107,7 +112,22 @@ class StudentRegistrationView(APIView):
     def post(self, request):
         serializer = StudentRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        profile = StudentOnboardingService.register_student(**serializer.validated_data)
+        try:
+            profile = StudentOnboardingService.register_student(**serializer.validated_data)
+        except serializers.ValidationError:
+            raise
+        except Exception as exc:
+            logger.exception("Student registration failed", extra={"matric_number": serializer.validated_data.get("matric_number")})
+            return Response(
+                {
+                    "success": False,
+                    "error": {
+                        "message": "Student registration failed. Please try again.",
+                        "details": {"non_field_errors": ["Unable to create the student account at this time."]},
+                    },
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
         return Response(
             {
                 "success": True,

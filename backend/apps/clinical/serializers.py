@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from apps.clinical.models import LabRequest, Prescription, StudentMedicalRecord
+from apps.clinical.models import LabRequest, LabRequestTest, Prescription, StudentMedicalRecord
 
 
 class PrescriptionItemWriteSerializer(serializers.Serializer):
@@ -20,14 +20,34 @@ class CreatePrescriptionSerializer(serializers.Serializer):
 
 class CreateLabRequestSerializer(serializers.Serializer):
     visit_id = serializers.UUIDField()
-    test_name = serializers.CharField(max_length=200)
+    test_name = serializers.CharField(max_length=200, required=False, allow_blank=True)
     test_code = serializers.CharField(required=False, allow_blank=True, default="")
     clinical_notes = serializers.CharField(required=False, allow_blank=True, default="")
+    tests = serializers.ListField(child=serializers.DictField(), required=False, allow_empty=False)
+
+    def validate(self, attrs):
+        has_single_test = bool(attrs.get("test_name", "").strip())
+        has_test_list = bool(attrs.get("tests"))
+        if not has_single_test and not has_test_list:
+            raise serializers.ValidationError("At least one lab test is required.")
+        return attrs
 
 
 class UploadLabResultSerializer(serializers.Serializer):
-    result_summary = serializers.CharField()
+    result_summary = serializers.CharField(required=False, allow_blank=True, default="")
     is_abnormal = serializers.BooleanField(required=False, default=False)
+    tests = serializers.ListField(child=serializers.DictField(), required=False, allow_empty=False)
+
+
+class SaveLabTestResultSerializer(serializers.Serializer):
+    result_value = serializers.CharField(required=False, allow_blank=True, default="")
+    reference_range = serializers.CharField(required=False, allow_blank=True, default="")
+    comments = serializers.CharField(required=False, allow_blank=True, default="")
+    status = serializers.ChoiceField(
+        choices=LabRequestTest._meta.get_field("status").choices,
+        required=False,
+        default="completed",
+    )
 
 
 class TreatmentScheduleWriteSerializer(serializers.Serializer):
@@ -40,6 +60,10 @@ class TreatmentScheduleWriteSerializer(serializers.Serializer):
     frequency = serializers.CharField(required=False, allow_blank=True, default="")
     start_date = serializers.DateField()
     end_date = serializers.DateField(required=False, allow_null=True)
+    occurrences_total = serializers.IntegerField(required=False, min_value=1, default=1)
+    interval_days = serializers.IntegerField(required=False, min_value=1, default=1)
+    schedule_time = serializers.TimeField(required=False, allow_null=True)
+    reminder_offset_minutes = serializers.IntegerField(required=False, min_value=0, default=60)
 
 
 class FollowUpAppointmentWriteSerializer(serializers.Serializer):
@@ -118,17 +142,79 @@ class PrescriptionDetailSerializer(serializers.ModelSerializer):
 class LabRequestSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source="visit.student.full_name", read_only=True)
     matric_number = serializers.CharField(source="visit.student.matric_number", read_only=True)
+    student_id = serializers.UUIDField(source="visit.student.id", read_only=True)
+    visit = serializers.UUIDField(source="visit.id", read_only=True)
+    visit_number = serializers.CharField(source="visit.visit_number", read_only=True)
+    requested_by = serializers.SerializerMethodField()
+    test_count = serializers.SerializerMethodField()
+    completed_test_count = serializers.SerializerMethodField()
+    tests = serializers.SerializerMethodField()
 
     class Meta:
         model = LabRequest
         fields = (
             "id",
+            "visit",
+            "visit_number",
             "request_number",
             "test_name",
             "test_code",
             "status",
+            "student_id",
             "student_name",
             "matric_number",
+            "requested_by",
+            "test_count",
+            "completed_test_count",
             "clinical_notes",
             "requested_at",
+            "completed_at",
+            "tests",
         )
+
+    def get_requested_by(self, obj):
+        if not obj.performed_by:
+            return ""
+        full_name = obj.performed_by.get_full_name()
+        return full_name or obj.performed_by.username
+
+    def get_test_count(self, obj):
+        prefetched_tests = getattr(obj, "_prefetched_objects_cache", {}).get("tests")
+        if prefetched_tests is not None:
+            return len(prefetched_tests)
+        return obj.tests.count()
+
+    def get_completed_test_count(self, obj):
+        prefetched_tests = getattr(obj, "_prefetched_objects_cache", {}).get("tests")
+        if prefetched_tests is not None:
+            return len([test for test in prefetched_tests if test.status == "completed"])
+        return obj.tests.filter(status="completed").count()
+
+    def get_tests(self, obj):
+        return LabRequestTestSerializer(obj.tests.all(), many=True).data
+
+
+class LabRequestTestSerializer(serializers.ModelSerializer):
+    performed_by_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LabRequestTest
+        fields = (
+            "id",
+            "test_name",
+            "test_code",
+            "result_value",
+            "reference_range",
+            "comments",
+            "status",
+            "completed_at",
+            "performed_by_name",
+            "created_at",
+            "updated_at",
+        )
+
+    def get_performed_by_name(self, obj):
+        if not obj.performed_by:
+            return ""
+        full_name = obj.performed_by.get_full_name()
+        return full_name or obj.performed_by.username

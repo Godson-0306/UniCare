@@ -1,6 +1,8 @@
 from django.db import transaction
 from django.utils import timezone
 
+from apps.accounts.constants import Role
+from apps.accounts.models import WorkstationAccount
 from apps.audit.services import AuditService
 from apps.core.realtime import RealtimeEventService
 from apps.emergency.models import EmergencyEvent, EmergencyStatus
@@ -12,6 +14,19 @@ from apps.visits.services.visit_service import VisitService
 
 class EmergencyService:
     EMERGENCY_ALERT_ROLE = "duty_officer"
+
+    @staticmethod
+    def resolve_duty_workstation() -> WorkstationAccount | None:
+        return (
+            WorkstationAccount.objects.filter(
+                assigned_role=Role.DUTY_OFFICER,
+                is_active=True,
+                user__is_active=True,
+            )
+            .select_related("user")
+            .order_by("-last_login_at", "created_at")
+            .first()
+        )
 
     @classmethod
     @transaction.atomic
@@ -32,10 +47,13 @@ class EmergencyService:
             performed_by=performed_by,
             is_emergency=True,
             priority=VisitPriority.EMERGENCY,
+            enqueue_initial=False,
         )
+        assigned_workstation = cls.resolve_duty_workstation()
         event = EmergencyEvent.objects.create(
             student=student,
             visit=visit,
+            assigned_workstation=assigned_workstation,
             description=description,
             latitude=latitude,
             longitude=longitude,
@@ -43,6 +61,7 @@ class EmergencyService:
             dial_triggered=True,
             dial_triggered_at=timezone.now(),
             performed_by=performed_by,
+            assigned_at=timezone.now() if assigned_workstation else None,
         )
         NotificationService.create_notification(
             student=student,
@@ -57,7 +76,11 @@ class EmergencyService:
             entity_id=str(event.id),
             performed_by=performed_by,
             visit=visit,
-            metadata={"dial_triggered": True},
+            metadata={
+                "dial_triggered": True,
+                "queue_bypassed": True,
+                "assigned_workstation": assigned_workstation.station_name if assigned_workstation else None,
+            },
             emergency_event=event,
         )
         payload = {
@@ -70,6 +93,8 @@ class EmergencyService:
             "latitude": float(event.latitude) if event.latitude is not None else None,
             "longitude": float(event.longitude) if event.longitude is not None else None,
             "visit_id": str(event.visit_id) if event.visit_id else None,
+            "assigned_workstation": assigned_workstation.station_name if assigned_workstation else None,
+            "assigned_workstation_code": assigned_workstation.station_code if assigned_workstation else None,
             "created_at": event.created_at.isoformat(),
         }
         RealtimeEventService.publish_to_role(cls.EMERGENCY_ALERT_ROLE, "emergency.triggered", payload)
@@ -95,6 +120,7 @@ class EmergencyService:
             "status": event.status,
             "resolved_at": event.resolved_at.isoformat() if event.resolved_at else None,
             "visit_id": str(event.visit_id) if event.visit_id else None,
+            "assigned_workstation": event.assigned_workstation.station_name if event.assigned_workstation else None,
         }
         RealtimeEventService.publish_to_role(cls.EMERGENCY_ALERT_ROLE, "emergency.resolved", payload)
         RealtimeEventService.publish_to_staff("emergency.resolved", payload)

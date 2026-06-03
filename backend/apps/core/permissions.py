@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 
-from apps.accounts.constants import Role
+from apps.accounts.constants import HOSPITAL_WORKSTATION_ROLES, Role
 
 
 class HasRole(BasePermission):
@@ -12,6 +12,9 @@ class HasRole(BasePermission):
             return False
         if user.is_superuser:
             return True
+        if user.role in HOSPITAL_WORKSTATION_ROLES:
+            if not hasattr(user, "workstation_profile") or not user.workstation_profile.is_active:
+                return False
         return user.role in self.allowed_roles
 
 

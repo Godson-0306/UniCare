@@ -50,6 +50,7 @@ class PrescriptionService:
             message="Your doctor has created a new prescription for dispensing.",
             metadata={"prescription_id": str(prescription.id)},
         )
+        VisitService.recalculate_visit_status(visit, performed_by=performed_by)
         return prescription
 
     @classmethod
@@ -74,5 +75,17 @@ class PrescriptionService:
             title="Prescription ready",
             message="Your prescription has been dispensed and is ready for pickup.",
             metadata={"prescription_id": str(prescription.id)},
+        )
+        VisitService.finalize_if_ready(prescription.visit, performed_by=performed_by)
+        from apps.core.realtime import RealtimeEventService
+
+        RealtimeEventService.publish_to_staff(
+            "prescription.ready",
+            {
+                "prescription_id": str(prescription.id),
+                "visit_id": str(prescription.visit_id),
+                "student": prescription.visit.student.full_name,
+                "status": prescription.status,
+            },
         )
         return prescription

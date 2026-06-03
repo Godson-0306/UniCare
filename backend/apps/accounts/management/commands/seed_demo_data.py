@@ -13,19 +13,29 @@ class Command(BaseCommand):
             defaults={
                 "role": Role.STUDENT,
                 "account_type": "student",
+                "first_name": "Ada",
+                "last_name": "Okafor",
+                "email": "ada.okafor@example.edu",
             },
         )
         if created:
             student_user.set_password("student123")
             student_user.save()
-            StudentProfile.objects.filter(user=student_user).update(
-                matric_number="U2024001",
-                first_name="Ada",
-                last_name="Okafor",
-                department="Computer Science",
-                faculty="Science",
-            )
             self.stdout.write(self.style.SUCCESS("Created demo student U2024001 / student123"))
+        StudentProfile.objects.update_or_create(
+            user=student_user,
+            defaults={
+                "matric_number": "U2024001",
+                "first_name": "Ada",
+                "last_name": "Okafor",
+                "department": "Computer Science",
+                "faculty": "Science",
+                "level": "300",
+                "gender": "Female",
+                "emergency_contact_name": "Mrs Okafor",
+                "emergency_contact_phone": "+2348000000001",
+            },
+        )
 
         workstations = [
             ("reception_station", Role.RECEPTIONIST, "Reception Desk"),
@@ -33,6 +43,7 @@ class Command(BaseCommand):
             ("doctor_station", Role.DOCTOR, "Doctor Station"),
             ("pharmacy_station", Role.PHARMACIST, "Pharmacy Desk"),
             ("lab_station", Role.LAB_TECHNICIAN, "Laboratory"),
+            ("duty_station", Role.DUTY_OFFICER, "Duty Officer Desk"),
         ]
         for username, role, station_name in workstations:
             user, created = User.objects.get_or_create(
@@ -42,12 +53,15 @@ class Command(BaseCommand):
             if created:
                 user.set_password("workstation123")
                 user.save()
-                WorkstationAccount.objects.filter(user=user).update(
-                    station_name=station_name,
-                    station_code=username,
-                    assigned_role=role,
-                )
                 self.stdout.write(self.style.SUCCESS(f"Created workstation {username} / workstation123"))
+            WorkstationAccount.objects.update_or_create(
+                user=user,
+                defaults={
+                    "station_name": station_name,
+                    "station_code": username,
+                    "assigned_role": role,
+                },
+            )
 
         admin, created = User.objects.get_or_create(
             username="admin",

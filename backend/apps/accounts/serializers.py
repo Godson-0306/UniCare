@@ -12,6 +12,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class StudentProfileSerializer(serializers.ModelSerializer):
     full_name = serializers.CharField(read_only=True)
+    phone_number = serializers.CharField(source="user.phone_number", read_only=True)
 
     class Meta:
         model = StudentProfile
@@ -28,9 +29,12 @@ class StudentProfileSerializer(serializers.ModelSerializer):
             "date_of_birth",
             "gender",
             "blood_group",
+            "phone_number",
             "emergency_contact_name",
             "emergency_contact_phone",
             "medical_notes",
+            "allergies",
+            "chronic_conditions",
         )
 
 
@@ -84,6 +88,19 @@ class StudentRegistrationSerializer(serializers.Serializer):
     medical_notes = serializers.CharField(required=False, allow_blank=True, max_length=2000)
     password = serializers.CharField(write_only=True, min_length=8)
 
+    @staticmethod
+    def _clean_text(value: str) -> str:
+        return " ".join(value.strip().split())
+
+    def validate_first_name(self, value: str) -> str:
+        return self._clean_text(value)
+
+    def validate_last_name(self, value: str) -> str:
+        return self._clean_text(value)
+
+    def validate_other_names(self, value: str) -> str:
+        return self._clean_text(value)
+
     def validate_matric_number(self, value: str) -> str:
         matric = value.strip().upper()
         if StudentProfile.objects.filter(matric_number=matric).exists():
@@ -101,3 +118,27 @@ class StudentRegistrationSerializer(serializers.Serializer):
     def validate_password(self, value: str) -> str:
         validate_password(value)
         return value
+
+    def validate_phone_number(self, value: str) -> str:
+        return value.strip()
+
+    def validate_emergency_contact_name(self, value: str) -> str:
+        return self._clean_text(value)
+
+    def validate_emergency_contact_phone(self, value: str) -> str:
+        return value.strip()
+
+    def validate_faculty(self, value: str) -> str:
+        return self._clean_text(value)
+
+    def validate_department(self, value: str) -> str:
+        return self._clean_text(value)
+
+    def validate_level(self, value: str) -> str:
+        return value.strip()
+
+    def validate_gender(self, value: str) -> str:
+        return self._clean_text(value)
+
+    def validate_medical_notes(self, value: str) -> str:
+        return value.strip()

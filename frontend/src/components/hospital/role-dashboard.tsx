@@ -59,7 +59,13 @@ export function RoleDashboard({ role, title, description }: RoleDashboardProps) 
       const payload = JSON.parse(event.data) as { event?: string; data?: Record<string, unknown> };
       if (!payload.event || !payload.data) return;
 
-      if (payload.event.startsWith("queue.") || payload.event.startsWith("emergency.")) {
+      if (
+        payload.event.startsWith("queue.") ||
+        payload.event.startsWith("emergency.") ||
+        payload.event.startsWith("visit.") ||
+        payload.event.startsWith("lab.") ||
+        payload.event.startsWith("prescription.")
+      ) {
         setLiveAlerts((current) => [payload as { event: string; data: Record<string, unknown> }, ...current].slice(0, 8));
       }
 

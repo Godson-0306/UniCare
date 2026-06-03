@@ -5,8 +5,10 @@ from apps.core.models import TimeStampedModel, UUIDPrimaryKeyModel
 
 class NotificationType(models.TextChoices):
     APPOINTMENT = "appointment", "Appointment"
+    FOLLOW_UP = "follow_up", "Follow-up"
     PRESCRIPTION = "prescription", "Prescription"
     LAB_RESULT = "lab_result", "Lab Result"
+    TREATMENT = "treatment", "Treatment"
     EMERGENCY = "emergency", "Emergency"
     GENERAL = "general", "General"
 

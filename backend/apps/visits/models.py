@@ -15,7 +15,7 @@ class Visit(UUIDPrimaryKeyModel, AuditableModel):
     status = models.CharField(
         max_length=32,
         choices=VisitStatus.choices,
-        default=VisitStatus.REGISTERED,
+        default=VisitStatus.CREATED,
         db_index=True,
     )
     priority = models.CharField(

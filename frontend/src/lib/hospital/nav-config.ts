@@ -4,16 +4,14 @@ import type { UserRole } from "@/types/auth";
 export const HOSPITAL_NAV: Record<UserRole, NavItem[]> = {
   receptionist: [
     { label: "Patient Search", href: "/hospital/reception" },
-    { label: "Create Visit", href: "/hospital/reception/visit" },
     { label: "Appointments", href: "/hospital/reception/appointments" },
   ],
   nurse: [
     { label: "Nurse Queue", href: "/hospital/nurse" },
-    { label: "Record Vitals", href: "/hospital/nurse/vitals" },
   ],
   doctor: [
     { label: "Doctor Queue", href: "/hospital/doctor" },
-    { label: "Consultation", href: "/hospital/doctor/consultation" },
+    { label: "Follow-ups", href: "/hospital/doctor/followups" },
   ],
   pharmacist: [
     { label: "Pharmacy Queue", href: "/hospital/pharmacy" },

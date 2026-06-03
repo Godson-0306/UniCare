@@ -1,28 +1,21 @@
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.appointments.serializers import AppointmentDetailSerializer, AppointmentListQuerySerializer
 from apps.appointments.models import Appointment
 from apps.core.permissions import IsHospitalStaff
+from apps.appointments.services import AppointmentService
 
 
 class AppointmentListView(APIView):
     permission_classes = [IsHospitalStaff]
 
     def get(self, request):
-        appointments = Appointment.objects.select_related("student").order_by("scheduled_at")[:100]
-        return Response(
-            {
-                "success": True,
-                "data": [
-                    {
-                        "id": str(a.id),
-                        "student": a.student.full_name,
-                        "matric_number": a.student.matric_number,
-                        "title": a.title,
-                        "scheduled_at": a.scheduled_at,
-                        "status": a.status,
-                    }
-                    for a in appointments
-                ],
-            }
+        serializer = AppointmentListQuerySerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        appointments = AppointmentService.list_for_user(
+            user=request.user,
+            status=serializer.validated_data.get("status"),
+            search=serializer.validated_data.get("search", ""),
         )
+        return Response({"success": True, "data": AppointmentDetailSerializer(appointments, many=True).data})

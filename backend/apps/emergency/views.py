@@ -22,6 +22,8 @@ class EmergencyListView(APIView):
                         "matric_number": e.student.matric_number,
                         "description": e.description,
                         "dial_triggered": e.dial_triggered,
+                        "assigned_workstation": e.assigned_workstation.station_name if e.assigned_workstation else None,
+                        "assigned_at": e.assigned_at,
                         "created_at": e.created_at,
                     }
                     for e in events

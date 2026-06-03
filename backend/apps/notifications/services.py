@@ -33,4 +33,15 @@ class NotificationService:
                 "metadata": notification.metadata,
             },
         )
+        RealtimeEventService.publish_to_staff(
+            "notification.created",
+            {
+                "student_id": str(student.id),
+                "student_name": student.full_name,
+                "type": notification.notification_type,
+                "title": notification.title,
+                "message": notification.message,
+                "created_at": notification.created_at.isoformat(),
+            },
+        )
         return notification

@@ -8,6 +8,7 @@ from apps.accounts.views.student_portal_views import (
     StudentMedicalProfileView,
     StudentNotificationsView,
     StudentPrescriptionsView,
+    StudentTimelineView,
 )
 
 urlpatterns = [
@@ -17,5 +18,6 @@ urlpatterns = [
     path("notifications/", StudentNotificationsView.as_view()),
     path("medical-history/", StudentMedicalHistoryView.as_view()),
     path("medical-profile/", StudentMedicalProfileView.as_view()),
+    path("timeline/", StudentTimelineView.as_view()),
     path("emergency/", StudentEmergencyView.as_view()),
 ]

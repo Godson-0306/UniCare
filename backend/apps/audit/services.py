@@ -41,3 +41,24 @@ class AuditService:
             role=role,
             metadata=metadata or {},
         )
+
+    @classmethod
+    def log_access(
+        cls,
+        *,
+        performed_by,
+        entity_type: str,
+        entity_id: str,
+        visit=None,
+        emergency_event=None,
+        metadata: dict | None = None,
+    ) -> AuditLog | None:
+        return cls.log(
+            action=f"{entity_type}_accessed",
+            entity_type=entity_type,
+            entity_id=entity_id,
+            performed_by=performed_by,
+            visit=visit,
+            emergency_event=emergency_event,
+            metadata=metadata,
+        )

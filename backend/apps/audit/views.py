@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 
 from apps.audit.models import AuditLog
 from apps.appointments.models import Appointment
-from apps.clinical.models import LabRequest, Prescription
+from apps.clinical.models import LabRequest, LabRequestTest, Prescription
 from apps.core.permissions import IsAdminUser
 from apps.emergency.models import EmergencyEvent
 from apps.visits.models import Consultation, Visit
@@ -61,9 +61,7 @@ class AnalyticsDashboardView(APIView):
             .annotate(total=Count("id"))
             .order_by("-day")[:14]
         )
-        lab_test_frequency = list(
-            LabRequest.objects.values("test_name").annotate(total=Count("id")).order_by("-total")[:10]
-        )
+        lab_test_frequency = list(LabRequestTest.objects.values("test_name").annotate(total=Count("id")).order_by("-total")[:10])
         emergency_case_frequency = list(
             EmergencyEvent.objects.annotate(day=TruncDate("created_at"))
             .values("day")

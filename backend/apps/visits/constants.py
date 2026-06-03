@@ -2,12 +2,16 @@ from django.db import models
 
 
 class VisitStatus(models.TextChoices):
-    REGISTERED = "registered", "Registered"
-    AT_NURSE = "at_nurse", "At Nurse"
-    AT_DOCTOR = "at_doctor", "At Doctor"
-    AWAITING_PHARMACY = "awaiting_pharmacy", "Awaiting Pharmacy"
-    AWAITING_LAB = "awaiting_lab", "Awaiting Lab"
+    CREATED = "created", "Created"
+    IN_NURSE_QUEUE = "in_nurse_queue", "In Nurse Queue"
+    VITALS_RECORDED = "vitals_recorded", "Vitals Completed"
+    IN_DOCTOR_CONSULTATION = "in_doctor_consultation", "In Doctor Queue"
+    CONSULTATION_COMPLETED = "consultation_completed", "Consultation Completed"
+    AWAITING_LAB_RESULTS = "awaiting_lab_results", "Awaiting Lab Results"
+    LAB_REQUESTED = "lab_requested", "Lab Requested"
+    PHARMACY_PROCESSING = "pharmacy_processing", "Pharmacy Processing"
     COMPLETED = "completed", "Completed"
+    CLOSED = "closed", "Closed"
     CANCELLED = "cancelled", "Cancelled"
 
 

@@ -8,7 +8,11 @@ class AppointmentStatus(models.TextChoices):
     CONFIRMED = "confirmed", "Confirmed"
     COMPLETED = "completed", "Completed"
     CANCELLED = "cancelled", "Cancelled"
-    NO_SHOW = "no_show", "No Show"
+    MISSED = "missed", "Missed"
+    ONGOING_TREATMENT = "ongoing_treatment", "Ongoing Treatment"
+
+
+APPOINTMENT_STATUS_MAX_LENGTH = max(32, max(len(value) for value, _label in AppointmentStatus.choices))
 
 
 class Appointment(UUIDPrimaryKeyModel, AuditableModel):
@@ -28,7 +32,7 @@ class Appointment(UUIDPrimaryKeyModel, AuditableModel):
     department = models.CharField(max_length=120, blank=True)
     scheduled_at = models.DateTimeField(db_index=True)
     status = models.CharField(
-        max_length=16,
+        max_length=APPOINTMENT_STATUS_MAX_LENGTH,
         choices=AppointmentStatus.choices,
         default=AppointmentStatus.SCHEDULED,
         db_index=True,

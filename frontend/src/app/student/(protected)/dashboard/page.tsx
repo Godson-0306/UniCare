@@ -13,6 +13,7 @@ import type { ApiResponse } from "@/types/api";
 
 const studentNav = [
   { label: "Dashboard", href: "/student/dashboard" },
+  { label: "Timeline", href: "/student/timeline" },
   { label: "Prescriptions", href: "/student/prescriptions" },
   { label: "Lab Results", href: "/student/lab-results" },
   { label: "Appointments", href: "/student/appointments" },
@@ -21,22 +22,24 @@ const studentNav = [
 ];
 
 export default function StudentDashboardPage() {
-  const [stats, setStats] = useState({ prescriptions: 0, labResults: 0, appointments: 0, unread: 0 });
+  const [stats, setStats] = useState({ prescriptions: 0, labResults: 0, appointments: 0, unread: 0, timeline: 0 });
 
   useEffect(() => {
     async function load() {
       try {
-        const [rx, lab, appt, notif] = await Promise.all([
+        const [rx, lab, appt, notif, timeline] = await Promise.all([
           apiClient.get<ApiResponse<unknown[]>>("/student/prescriptions/"),
           apiClient.get<ApiResponse<unknown[]>>("/student/lab-results/"),
           apiClient.get<ApiResponse<unknown[]>>("/student/appointments/"),
           apiClient.get<ApiResponse<{ is_read: boolean }[]>>("/student/notifications/"),
+          apiClient.get<ApiResponse<unknown[]>>("/student/timeline/"),
         ]);
         setStats({
           prescriptions: rx.data.success ? rx.data.data.length : 0,
           labResults: lab.data.success ? lab.data.data.length : 0,
           appointments: appt.data.success ? appt.data.data.length : 0,
           unread: notif.data.success ? notif.data.data.filter((n) => !n.is_read).length : 0,
+          timeline: timeline.data.success ? timeline.data.data.length : 0,
         });
       } catch {
         /* backend may be offline during local UI dev */
@@ -50,6 +53,7 @@ export default function StudentDashboardPage() {
     { label: "Lab Results", value: stats.labResults, href: "/student/lab-results", icon: FlaskConical },
     { label: "Appointments", value: stats.appointments, href: "/student/appointments", icon: Calendar },
     { label: "Unread Alerts", value: stats.unread, href: "/student/notifications", icon: Bell },
+    { label: "Timeline Events", value: stats.timeline, href: "/student/timeline", icon: History },
   ];
 
   return (

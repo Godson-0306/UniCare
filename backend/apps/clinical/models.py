@@ -2,6 +2,7 @@ from django.db import models
 
 from apps.clinical.constants import (
     LabRequestStatus,
+    LabTestStatus,
     PrescriptionStatus,
     TreatmentScheduleStatus,
     TreatmentScheduleType,
@@ -101,6 +102,33 @@ class LabRequest(UUIDPrimaryKeyModel, AuditableModel):
         ordering = ["-requested_at"]
 
 
+class LabRequestTest(UUIDPrimaryKeyModel, AuditableModel):
+    lab_request = models.ForeignKey(
+        LabRequest,
+        on_delete=models.CASCADE,
+        related_name="tests",
+    )
+    test_name = models.CharField(max_length=200)
+    test_code = models.CharField(max_length=64, blank=True)
+    result_value = models.TextField(blank=True)
+    reference_range = models.CharField(max_length=200, blank=True)
+    comments = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=16,
+        choices=LabTestStatus.choices,
+        default=LabTestStatus.PENDING,
+        db_index=True,
+    )
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "clinical_lab_request_test"
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["lab_request", "status"]),
+        ]
+
+
 class LabResult(UUIDPrimaryKeyModel, AuditableModel):
     lab_request = models.OneToOneField(
         LabRequest,
@@ -138,6 +166,10 @@ class TreatmentSchedule(UUIDPrimaryKeyModel, AuditableModel):
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     next_due_at = models.DateTimeField(null=True, blank=True)
+    interval_days = models.PositiveIntegerField(default=1)
+    occurrences_total = models.PositiveIntegerField(default=1)
+    appointments_generated = models.PositiveIntegerField(default=0)
+    reminder_offset_minutes = models.PositiveIntegerField(default=60)
     status = models.CharField(
         max_length=16,
         choices=TreatmentScheduleStatus.choices,
