@@ -9,7 +9,6 @@ import { formatDateTime } from "@/lib/utils";
 
 const studentNav = [
   { label: "Dashboard", href: "/student/dashboard" },
-  { label: "Timeline", href: "/student/timeline" },
   { label: "Prescriptions", href: "/student/prescriptions" },
   { label: "Lab Results", href: "/student/lab-results" },
   { label: "Appointments", href: "/student/appointments" },

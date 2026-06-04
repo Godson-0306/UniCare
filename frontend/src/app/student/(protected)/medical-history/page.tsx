@@ -7,6 +7,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { apiClient } from "@/lib/api/client";
 import { formatDateTime } from "@/lib/utils";
 
+function VisitItem({ visit }: { visit: any }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-lg border border-slate-200 p-4 text-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">{visit.visit_number}</p>
+          <p className="text-sm text-slate-700">{visit.chief_complaint}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs uppercase tracking-wide text-teal-700">{visit.status}</p>
+          <p className="text-xs text-slate-400">{formatDateTime(visit.registered_at)}</p>
+          <button onClick={() => setOpen((v) => !v)} className="mt-2 text-xs text-teal-600">
+            {open ? "Hide details" : "View details"}
+          </button>
+        </div>
+      </div>
+      {open && (
+        <pre className="mt-3 rounded bg-slate-50 p-3 text-xs text-slate-600">{JSON.stringify(visit, null, 2)}</pre>
+      )}
+    </div>
+  );
+}
+
 const studentNav = [
   { label: "Dashboard", href: "/student/dashboard" },
   { label: "Prescriptions", href: "/student/prescriptions" },
@@ -126,12 +150,7 @@ export default function StudentMedicalHistoryPage() {
           <CardContent className="space-y-3">
             {visits.length === 0 && <p className="text-sm text-slate-500">No visit history available.</p>}
             {visits.map((visit) => (
-              <div key={visit.id} className="rounded-lg border border-slate-200 p-4 text-sm">
-                <p className="font-medium text-slate-900">{visit.visit_number}</p>
-                <p className="mt-1 text-slate-700">{visit.chief_complaint}</p>
-                <p className="mt-2 text-xs uppercase tracking-wide text-slate-500">{visit.status}</p>
-                <p className="mt-1 text-xs text-slate-400">{formatDateTime(visit.registered_at)}</p>
-              </div>
+              <VisitItem key={visit.id} visit={visit} />
             ))}
           </CardContent>
         </Card>

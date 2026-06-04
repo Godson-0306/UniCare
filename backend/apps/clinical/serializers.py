@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.clinical.models import LabRequest, LabRequestTest, Prescription, StudentMedicalRecord
+from apps.clinical.models import FollowUp
 
 
 class PrescriptionItemWriteSerializer(serializers.Serializer):
@@ -303,3 +304,30 @@ class LabRequestTestSerializer(serializers.ModelSerializer):
 
     def get_attachment_url(self, obj):
         return obj.attachment.url if obj.attachment else ""
+
+
+class FollowUpSerializer(serializers.ModelSerializer):
+    patient_id = serializers.UUIDField(source="patient.id", read_only=True)
+    patient_name = serializers.CharField(source="patient.full_name", read_only=True)
+    visit_id = serializers.UUIDField(source="visit.id", read_only=True)
+    doctor_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = FollowUp
+        fields = (
+            "id",
+            "patient_id",
+            "patient_name",
+            "visit_id",
+            "doctor_name",
+            "follow_up_type",
+            "scheduled_date",
+            "notes",
+            "status",
+            "created_at",
+        )
+
+    def get_doctor_name(self, obj):
+        if not obj.doctor:
+            return ""
+        return obj.doctor.get_full_name() or obj.doctor.username

@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 
 from apps.clinical.constants import (
     LabRequestStatus,
@@ -184,4 +185,59 @@ class TreatmentSchedule(UUIDPrimaryKeyModel, AuditableModel):
         indexes = [
             models.Index(fields=["student", "status"]),
             models.Index(fields=["visit", "schedule_type"]),
+        ]
+
+
+class FollowUp(UUIDPrimaryKeyModel, AuditableModel):
+    patient = models.ForeignKey(
+        "accounts.StudentProfile",
+        on_delete=models.CASCADE,
+        related_name="follow_ups",
+    )
+    visit = models.ForeignKey(
+        "visits.Visit",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="follow_ups",
+    )
+    doctor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_follow_ups",
+    )
+    follow_up_type = models.CharField(
+        max_length=32,
+        choices=[
+            ("medication_review", "Medication Review"),
+            ("lab_review", "Lab Review"),
+            ("injection_course", "Injection Course"),
+            ("consultation_review", "Consultation Review"),
+            ("other", "Other"),
+        ],
+        default="other",
+        db_index=True,
+    )
+    scheduled_date = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=16,
+        choices=[
+            ("pending", "Pending"),
+            ("completed", "Completed"),
+            ("missed", "Missed"),
+            ("cancelled", "Cancelled"),
+        ],
+        default="pending",
+        db_index=True,
+    )
+
+    class Meta:
+        db_table = "clinical_follow_up"
+        ordering = ["-scheduled_date", "-created_at"]
+        indexes = [
+            models.Index(fields=["patient", "status"]),
+            models.Index(fields=["visit", "scheduled_date"]),
         ]

@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from apps.accounts.models import StudentProfile
 from apps.appointments.services import AppointmentService
 from apps.audit.services import AuditService
-from apps.clinical.models import StudentMedicalRecord, TreatmentSchedule
+from apps.clinical.models import StudentMedicalRecord, TreatmentSchedule, FollowUp
 from apps.clinical.serializers import (
     CreateLabRequestSerializer,
     CreatePrescriptionSerializer,
@@ -15,6 +15,7 @@ from apps.clinical.serializers import (
     StudentMedicalRecordSerializer,
     StudentMedicalRecordWriteSerializer,
     TreatmentScheduleWriteSerializer,
+    FollowUpSerializer,
 )
 from apps.clinical.services.lab_service import LabService
 from apps.clinical.services.medical_profile_service import MedicalProfileService
@@ -79,6 +80,21 @@ class StudentMedicalProfileView(APIView):
     def get(self, request, student_id):
         student = StudentProfile.objects.get(id=student_id)
         records = StudentMedicalRecord.objects.filter(student=student).select_related("visit", "performed_by")
+        # Build a small summary for fast doctor-side display
+        active_records = records.filter(is_active=True)
+        allergies = list(active_records.filter(record_type="allergy").values_list("title", flat=True))
+        chronic = list(active_records.filter(record_type="chronic_illness").values_list("title", flat=True))
+        recent_diagnoses = list(records.filter(record_type="diagnosed_condition").order_by("-diagnosed_at").values_list("title", flat=True)[:5])
+        outstanding_followups_qs = FollowUp.objects.filter(patient=student, status="pending").select_related("doctor", "visit").order_by("scheduled_date")
+        outstanding_followups = FollowUpSerializer(outstanding_followups_qs, many=True).data
+        last_visit = Visit.objects.filter(student=student).select_related("consultation", "consultation__performed_by").order_by("-registered_at").first()
+        last_consultation_date = last_visit.registered_at if last_visit else None
+        last_doctor = ""
+        last_diagnosis = ""
+        if last_visit and getattr(last_visit, "consultation", None):
+            last_diagnosis = last_visit.consultation.diagnosis or ""
+            if getattr(last_visit.consultation, "performed_by", None):
+                last_doctor = last_visit.consultation.performed_by.get_full_name() or ""
         AuditService.log_access(
             performed_by=request.user,
             entity_type="student_medical_profile",
@@ -96,9 +112,33 @@ class StudentMedicalProfileView(APIView):
                         "medical_notes": student.medical_notes,
                     },
                     "records": StudentMedicalRecordSerializer(records, many=True).data,
+                    "summary": {
+                        "known_allergies": allergies,
+                        "chronic_conditions": chronic,
+                        "recent_diagnoses": recent_diagnoses,
+                        "outstanding_followups": outstanding_followups,
+                        "last_consultation_date": last_consultation_date,
+                        "last_doctor": last_doctor,
+                        "last_diagnosis": last_diagnosis,
+                    },
                 },
             }
         )
+
+
+class StudentFollowUpsView(APIView):
+    permission_classes = [IsDoctor]
+
+    def get(self, request, student_id):
+        student = StudentProfile.objects.get(id=student_id)
+        followups = FollowUp.objects.filter(patient=student).select_related("doctor", "visit").order_by("-scheduled_date")
+        AuditService.log_access(
+            performed_by=request.user,
+            entity_type="student_followups",
+            entity_id=str(student.id),
+            metadata={"count": followups.count()},
+        )
+        return Response({"success": True, "data": FollowUpSerializer(followups, many=True).data})
 
 
 class StudentTimelineView(APIView):
@@ -221,6 +261,20 @@ class SaveConsultationView(APIView):
                 notes=serializer.validated_data.get("follow_up_notes", ""),
                 performed_by=request.user,
             )
+            # also persist as a clinical FollowUp record for longitudinal tracking
+            try:
+                FollowUp.objects.create(
+                    patient=visit.student,
+                    visit=visit,
+                    doctor=request.user,
+                    follow_up_type="consultation_review",
+                    scheduled_date=serializer.validated_data["follow_up_date"],
+                    notes=serializer.validated_data.get("follow_up_notes", ""),
+                    status="pending",
+                )
+            except Exception:
+                # Do not block consultation save on follow-up persistence failure
+                pass
 
         if lab_request:
             VisitService.transition_status(
