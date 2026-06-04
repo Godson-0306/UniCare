@@ -64,16 +64,19 @@ class QueueEntrySerializer(serializers.ModelSerializer):
 
 
 class NurseQueueVisitSerializer(serializers.ModelSerializer):
+    student_id = serializers.UUIDField(source="student.id", read_only=True)
     student_name = serializers.CharField(source="student.full_name", read_only=True)
     matric_number = serializers.CharField(source="student.matric_number", read_only=True)
     nurse_queue_entry_id = serializers.SerializerMethodField()
     nurse_queue_status = serializers.SerializerMethodField()
+    nurse_queue_position = serializers.SerializerMethodField()
 
     class Meta:
         model = Visit
         fields = (
             "id",
             "visit_number",
+            "student_id",
             "student_name",
             "matric_number",
             "status",
@@ -83,6 +86,7 @@ class NurseQueueVisitSerializer(serializers.ModelSerializer):
             "created_at",
             "nurse_queue_entry_id",
             "nurse_queue_status",
+            "nurse_queue_position",
         )
 
     def _get_active_nurse_entry(self, obj: Visit) -> QueueEntry | None:
@@ -102,6 +106,10 @@ class NurseQueueVisitSerializer(serializers.ModelSerializer):
     def get_nurse_queue_status(self, obj: Visit):
         entry = self._get_active_nurse_entry(obj)
         return entry.status if entry else None
+
+    def get_nurse_queue_position(self, obj: Visit):
+        entry = self._get_active_nurse_entry(obj)
+        return entry.position if entry else 0
 
 
 class DoctorQueueEntrySerializer(serializers.ModelSerializer):

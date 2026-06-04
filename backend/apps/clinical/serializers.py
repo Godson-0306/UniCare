@@ -108,8 +108,15 @@ class StudentMedicalRecordWriteSerializer(serializers.Serializer):
 
 class PrescriptionDetailSerializer(serializers.ModelSerializer):
     items = serializers.SerializerMethodField()
+    student = serializers.SerializerMethodField()
+    student_id = serializers.UUIDField(source="visit.student.id", read_only=True)
     student_name = serializers.CharField(source="visit.student.full_name", read_only=True)
     matric_number = serializers.CharField(source="visit.student.matric_number", read_only=True)
+    visit = serializers.UUIDField(source="visit.id", read_only=True)
+    visit_number = serializers.CharField(source="visit.visit_number", read_only=True)
+    prescribed_by = serializers.SerializerMethodField()
+    diagnosis = serializers.SerializerMethodField()
+    allergies = serializers.CharField(source="visit.student.allergies", read_only=True)
 
     class Meta:
         model = Prescription
@@ -118,12 +125,44 @@ class PrescriptionDetailSerializer(serializers.ModelSerializer):
             "prescription_number",
             "status",
             "notes",
+            "student",
+            "student_id",
             "student_name",
             "matric_number",
+            "visit",
+            "visit_number",
+            "prescribed_by",
+            "diagnosis",
+            "allergies",
             "created_at",
             "dispensed_at",
             "items",
         )
+
+    def get_student(self, obj):
+        student = obj.visit.student
+        return {
+            "id": str(student.id),
+            "full_name": student.full_name,
+            "matric_number": student.matric_number,
+            "department": student.department,
+            "faculty": student.faculty,
+            "level": student.level,
+            "allergies": student.allergies,
+            "chronic_conditions": student.chronic_conditions,
+        }
+
+    def get_prescribed_by(self, obj):
+        if not obj.performed_by:
+            return ""
+        full_name = obj.performed_by.get_full_name()
+        return full_name or obj.performed_by.username
+
+    def get_diagnosis(self, obj):
+        consultation = getattr(obj.visit, "consultation", None)
+        if not consultation:
+            return ""
+        return consultation.diagnosis or consultation.assessment
 
     def get_items(self, obj):
         return [
@@ -136,6 +175,8 @@ class PrescriptionDetailSerializer(serializers.ModelSerializer):
                 "quantity": i.quantity,
                 "instructions": i.instructions,
                 "is_dispensed": i.is_dispensed,
+                "dispensed_at": i.dispensed_at,
+                "dispensed_by": (i.performed_by.get_full_name() or i.performed_by.username) if i.performed_by else "",
             }
             for i in obj.items.all()
         ]

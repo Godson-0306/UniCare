@@ -9,7 +9,7 @@ from apps.clinical.constants import PrescriptionStatus
 from apps.clinical.models import Prescription, PrescriptionItem
 from apps.notifications.models import NotificationType
 from apps.notifications.services import NotificationService
-from apps.visits.constants import QueueStage
+from apps.visits.constants import QueueStage, QueueStatus
 from apps.visits.services.visit_service import VisitService
 
 
@@ -76,6 +76,7 @@ class PrescriptionService:
             message="Your prescription has been dispensed and is ready for pickup.",
             metadata={"prescription_id": str(prescription.id)},
         )
+        cls._complete_pharmacy_queue(prescription, performed_by)
         VisitService.finalize_if_ready(prescription.visit, performed_by=performed_by)
         from apps.core.realtime import RealtimeEventService
 
@@ -89,3 +90,62 @@ class PrescriptionService:
             },
         )
         return prescription
+
+    @classmethod
+    @transaction.atomic
+    def mark_item_dispensed(cls, item: PrescriptionItem, performed_by) -> Prescription:
+        now = timezone.now()
+        item.is_dispensed = True
+        item.dispensed_at = now
+        item.performed_by = performed_by
+        item.save(update_fields=["is_dispensed", "dispensed_at", "performed_by", "updated_at"])
+
+        prescription = item.prescription
+        total_items = prescription.items.count()
+        dispensed_items = prescription.items.filter(is_dispensed=True).count()
+        if total_items and dispensed_items == total_items:
+            prescription.status = PrescriptionStatus.DISPENSED
+            prescription.dispensed_at = now
+            cls._complete_pharmacy_queue(prescription, performed_by)
+        else:
+            prescription.status = PrescriptionStatus.PARTIALLY_DISPENSED
+        prescription.performed_by = performed_by
+        prescription.save(update_fields=["status", "dispensed_at", "performed_by", "updated_at"])
+
+        AuditService.log(
+            action="prescription_item_dispensed",
+            entity_type="prescription_item",
+            entity_id=str(item.id),
+            performed_by=performed_by,
+            visit=prescription.visit,
+            metadata={"prescription_id": str(prescription.id), "drug_name": item.drug_name},
+        )
+        if prescription.status == PrescriptionStatus.DISPENSED:
+            NotificationService.create_notification(
+                student=prescription.visit.student,
+                notification_type=NotificationType.PRESCRIPTION,
+                title="Prescription ready",
+                message="Your prescription has been dispensed and is ready for pickup.",
+                metadata={"prescription_id": str(prescription.id)},
+            )
+            VisitService.finalize_if_ready(prescription.visit, performed_by=performed_by)
+            from apps.core.realtime import RealtimeEventService
+
+            RealtimeEventService.publish_to_staff(
+                "prescription.ready",
+                {
+                    "prescription_id": str(prescription.id),
+                    "visit_id": str(prescription.visit_id),
+                    "student": prescription.visit.student.full_name,
+                    "status": prescription.status,
+                },
+            )
+        return prescription
+
+    @staticmethod
+    def _complete_pharmacy_queue(prescription: Prescription, performed_by) -> None:
+        for entry in prescription.visit.queue_entries.filter(
+            stage=QueueStage.PHARMACY,
+            status__in=[QueueStatus.WAITING, QueueStatus.IN_PROGRESS],
+        ):
+            VisitService.complete_queue_entry(entry, performed_by, notes=f"Dispensed {prescription.prescription_number}")

@@ -67,6 +67,22 @@ class RecordVitalsView(APIView):
         )
 
 
+class NurseVisitDetailView(APIView):
+    permission_classes = [IsNurse]
+
+    def get(self, request, visit_id):
+        visit = Visit.objects.select_related("student", "consultation").prefetch_related("vitals_records").get(id=visit_id)
+        return Response({"success": True, "data": VisitDetailSerializer(visit).data})
+
+
+class NurseStudentHistoryView(APIView):
+    permission_classes = [IsNurse]
+
+    def get(self, request, student_id):
+        visits = Visit.objects.filter(student_id=student_id).select_related("student", "consultation").prefetch_related("vitals_records").order_by("-registered_at")[:50]
+        return Response({"success": True, "data": VisitDetailSerializer(visits, many=True).data})
+
+
 class ForwardToDoctorView(APIView):
     permission_classes = [IsNurse]
 
