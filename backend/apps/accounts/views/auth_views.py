@@ -5,11 +5,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenRefreshView
+from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import serializers
 
 from apps.accounts.serializers import (
     AdminLoginSerializer,
     StudentLoginSerializer,
+    StudentProfileSerializer,
     StudentRegistrationSerializer,
     UnifiedLoginSerializer,
     UserSerializer,
@@ -18,6 +20,7 @@ from apps.accounts.serializers import (
 )
 from apps.accounts.services.auth_service import AuthService, AuthenticationError
 from apps.accounts.services.student_onboarding_service import StudentOnboardingService
+from apps.core.responses import error_payload
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,8 @@ def _login_response(result: dict) -> Response:
     }
     if "workstation" in result:
         data["workstation"] = WorkstationAccountSerializer(result["workstation"]).data
+    if hasattr(result["user"], "student_profile"):
+        data["profile"] = StudentProfileSerializer(result["user"].student_profile).data
     return Response({"success": True, "data": data})
 
 
@@ -45,7 +50,7 @@ class UnifiedLoginView(APIView):
                 serializer.validated_data["password"],
             )
         except AuthenticationError as exc:
-            return Response({"success": False, "error": {"message": str(exc)}}, status=401)
+            return Response(error_payload(str(exc), code=401), status=401)
         return _login_response(result)
 
 
@@ -61,7 +66,7 @@ class StudentLoginView(APIView):
                 serializer.validated_data["password"],
             )
         except AuthenticationError as exc:
-            return Response({"success": False, "error": {"message": str(exc)}}, status=401)
+            return Response(error_payload(str(exc), code=401), status=401)
         return _login_response(result)
 
 
@@ -77,7 +82,7 @@ class WorkstationLoginView(APIView):
                 serializer.validated_data["password"],
             )
         except AuthenticationError as exc:
-            return Response({"success": False, "error": {"message": str(exc)}}, status=401)
+            return Response(error_payload(str(exc), code=401), status=401)
         return _login_response(result)
 
 
@@ -93,7 +98,7 @@ class AdminLoginView(APIView):
                 serializer.validated_data["password"],
             )
         except AuthenticationError as exc:
-            return Response({"success": False, "error": {"message": str(exc)}}, status=401)
+            return Response(error_payload(str(exc), code=401), status=401)
         return _login_response(result)
 
 
@@ -103,6 +108,19 @@ class CustomTokenRefreshView(TokenRefreshView):
         if response.status_code == 200:
             response.data = {"success": True, "data": response.data}
         return response
+
+
+class LogoutView(APIView):
+    def post(self, request):
+        refresh = request.data.get("refresh")
+        if not refresh:
+            return Response(
+                error_payload("Refresh token is required.", code=400),
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        token = RefreshToken(refresh)
+        token.blacklist()
+        return Response({"success": True, "data": {"message": "Signed out successfully."}})
 
 
 class StudentRegistrationView(APIView):
@@ -119,13 +137,11 @@ class StudentRegistrationView(APIView):
         except Exception as exc:
             logger.exception("Student registration failed", extra={"matric_number": serializer.validated_data.get("matric_number")})
             return Response(
-                {
-                    "success": False,
-                    "error": {
-                        "message": "Student registration failed. Please try again.",
-                        "details": {"non_field_errors": ["Unable to create the student account at this time."]},
-                    },
-                },
+                error_payload(
+                    "Student registration failed. Please try again.",
+                    code=500,
+                    details={"non_field_errors": ["Unable to create the student account at this time."]},
+                ),
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
         return Response(

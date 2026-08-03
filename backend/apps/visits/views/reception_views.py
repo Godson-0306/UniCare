@@ -102,7 +102,7 @@ class CreateAppointmentView(APIView):
         visit = None
         visit_id = serializer.validated_data.get("visit_id")
         if visit_id:
-            visit = Visit.objects.get(id=visit_id, student=student)
+            visit = get_object_or_404(Visit, id=visit_id, student=student)
         appointment = AppointmentService.create_reception_appointment(
             student=student,
             title=serializer.validated_data["title"],
@@ -117,3 +117,4 @@ class CreateAppointmentView(APIView):
             {"success": True, "data": AppointmentDetailSerializer(appointment).data},
             status=status.HTTP_201_CREATED,
         )
+from django.shortcuts import get_object_or_404

@@ -1,10 +1,10 @@
 "use client";
 
 import { BellRing, Siren, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { getNotificationsWebSocketUrl } from "@/lib/realtime";
+import { useNotificationsSocket } from "@/hooks/use-notifications-socket";
 
 interface LiveEventPayload {
   event: string;
@@ -34,12 +34,8 @@ function playEmergencyTone() {
 export function HospitalRealtimeAlertCenter() {
   const [alerts, setAlerts] = useState<LiveEventPayload[]>([]);
 
-  useEffect(() => {
-    const socketUrl = getNotificationsWebSocketUrl();
-    if (!socketUrl) return;
-
-    const socket = new WebSocket(socketUrl);
-    socket.onmessage = (message) => {
+  useNotificationsSocket({
+    onMessage: useCallback((message: MessageEvent) => {
       const payload = JSON.parse(message.data) as Partial<LiveEventPayload>;
       if (!payload.event || !payload.data) return;
       if (!payload.event.startsWith("emergency.")) return;
@@ -48,10 +44,8 @@ export function HospitalRealtimeAlertCenter() {
       if (payload.event === "emergency.triggered") {
         playEmergencyTone();
       }
-    };
-
-    return () => socket.close();
-  }, []);
+    }, []),
+  });
 
   if (alerts.length === 0) return null;
 
@@ -88,12 +82,12 @@ export function HospitalRealtimeAlertCenter() {
           </div>
           <div className="space-y-1 text-sm text-slate-700">
             <p>{String(alert.data.description ?? "Emergency response requested.")}</p>
-            {alert.data.assigned_workstation && (
+            {Boolean(alert.data.assigned_workstation) && (
               <p className="text-xs font-medium text-red-700">
                 Assigned workstation: {String(alert.data.assigned_workstation)}
               </p>
             )}
-            {alert.data.location_label && <p className="text-xs text-slate-500">Location: {String(alert.data.location_label)}</p>}
+            {Boolean(alert.data.location_label) && <p className="text-xs text-slate-500">Location: {String(alert.data.location_label)}</p>}
           </div>
         </div>
       ))}

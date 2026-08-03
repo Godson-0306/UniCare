@@ -1,6 +1,8 @@
 from rest_framework.permissions import BasePermission
+from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.constants import HOSPITAL_WORKSTATION_ROLES, Role
+from apps.visits.constants import QueueStage, QueueStatus
 
 
 class HasRole(BasePermission):
@@ -72,3 +74,43 @@ class IsWorkstationAccount(BasePermission):
             and hasattr(user, "workstation_profile")
             and user.workstation_profile.is_active
         )
+
+
+ROLE_QUEUE_STAGE = {
+    Role.NURSE: QueueStage.NURSE,
+    Role.DOCTOR: QueueStage.DOCTOR,
+    Role.PHARMACIST: QueueStage.PHARMACY,
+    Role.LAB_TECHNICIAN: QueueStage.LAB,
+}
+
+
+def assert_staff_can_access_visit(user, visit):
+    if user.is_superuser or user.role in (Role.ADMIN, Role.SUPER_ADMIN, Role.RECEPTIONIST, Role.DUTY_OFFICER):
+        return
+
+    stage = ROLE_QUEUE_STAGE.get(user.role)
+    if not stage:
+        raise PermissionDenied("You do not have access to this visit.")
+
+    is_in_queue = visit.queue_entries.filter(
+        stage=stage,
+        status__in=[QueueStatus.WAITING, QueueStatus.IN_PROGRESS],
+    ).filter(assigned_to__in=[None, user]).exists()
+    if not is_in_queue:
+        raise PermissionDenied("You do not have access to this visit.")
+
+
+def assert_staff_can_access_student(user, student):
+    if user.is_superuser or user.role in (Role.ADMIN, Role.SUPER_ADMIN, Role.RECEPTIONIST, Role.DUTY_OFFICER):
+        return
+
+    stage = ROLE_QUEUE_STAGE.get(user.role)
+    if not stage:
+        raise PermissionDenied("You do not have access to this student.")
+
+    has_active_queue = student.visits.filter(
+        queue_entries__stage=stage,
+        queue_entries__status__in=[QueueStatus.WAITING, QueueStatus.IN_PROGRESS],
+    ).filter(queue_entries__assigned_to__in=[None, user]).exists()
+    if not has_active_queue:
+        raise PermissionDenied("You do not have access to this student.")

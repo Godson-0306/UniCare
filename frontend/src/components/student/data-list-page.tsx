@@ -5,17 +5,9 @@ import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
+import { STUDENT_NAV } from "@/lib/student/nav-config";
 import { formatDateTime } from "@/lib/utils";
 import type { ApiResponse } from "@/types/api";
-
-const studentNav = [
-  { label: "Dashboard", href: "/student/dashboard" },
-  { label: "Prescriptions", href: "/student/prescriptions" },
-  { label: "Lab Results", href: "/student/lab-results" },
-  { label: "Appointments", href: "/student/appointments" },
-  { label: "Medical History", href: "/student/medical-history" },
-  { label: "Notifications", href: "/student/notifications" },
-];
 
 interface DataListPageProps {
   title: string;
@@ -33,7 +25,7 @@ export function DataListPage({ title, endpoint, emptyMessage }: DataListPageProp
   }, [endpoint]);
 
   return (
-    <DashboardShell title={title} navItems={studentNav}>
+    <DashboardShell title={title} navItems={STUDENT_NAV}>
       <Card>
         <CardHeader>
           <CardTitle>{title}</CardTitle>

@@ -6,6 +6,7 @@ import { useState } from "react";
 
 import { login, toAuthSession } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { loginSchema } from "@/lib/auth/schemas";
 import { portalForAccount } from "@/lib/auth/portal";
 import { ROLE_DASHBOARD_PATH } from "@/lib/constants/roles";
 import { useAuthStore } from "@/stores/auth-store";
@@ -19,9 +20,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   async function onSignIn() {
-    const id = identifier.trim();
-    if (!id || !password) {
-      setError("Enter your user ID and password.");
+    const parsed = loginSchema.safeParse({ identifier, password });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Enter your user ID and password.");
       return;
     }
 
@@ -29,7 +30,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const response = await login(id, password);
+      const response = await login(parsed.data.identifier, parsed.data.password);
 
       if (!response.success) {
         setError(response.error?.message ?? "Sign in failed.");

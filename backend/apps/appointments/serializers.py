@@ -18,6 +18,11 @@ class AppointmentListQuerySerializer(serializers.Serializer):
     search = serializers.CharField(required=False, allow_blank=True)
 
 
+class AppointmentUpdateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=AppointmentStatus.choices, required=False)
+    notes = serializers.CharField(required=False, allow_blank=True)
+
+
 class AppointmentDetailSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source="student.full_name", read_only=True)
     matric_number = serializers.CharField(source="student.matric_number", read_only=True)

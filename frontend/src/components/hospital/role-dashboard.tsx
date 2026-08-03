@@ -58,22 +58,24 @@ export function RoleDashboard({ role, title, description }: RoleDashboardProps) 
     socket.onmessage = (event) => {
       const payload = JSON.parse(event.data) as { event?: string; data?: Record<string, unknown> };
       if (!payload.event || !payload.data) return;
+      const eventName = payload.event;
+      const data = payload.data;
 
       if (
-        payload.event.startsWith("queue.") ||
-        payload.event.startsWith("emergency.") ||
-        payload.event.startsWith("visit.") ||
-        payload.event.startsWith("lab.") ||
-        payload.event.startsWith("prescription.")
+        eventName.startsWith("queue.") ||
+        eventName.startsWith("emergency.") ||
+        eventName.startsWith("visit.") ||
+        eventName.startsWith("lab.") ||
+        eventName.startsWith("prescription.")
       ) {
-        setLiveAlerts((current) => [payload as { event: string; data: Record<string, unknown> }, ...current].slice(0, 8));
+        setLiveAlerts((current) => [{ event: eventName, data }, ...current].slice(0, 8));
       }
 
-      if (payload.event === "queue.updated") {
-        setQueue((current) => [payload.data, ...current].slice(0, 10));
+      if (eventName === "queue.updated") {
+        setQueue((current) => [data, ...current].slice(0, 10));
       }
 
-      if (payload.event === "emergency.triggered") {
+      if (eventName === "emergency.triggered") {
         try {
           const audioContext = new AudioContext();
           const oscillator = audioContext.createOscillator();

@@ -5,16 +5,8 @@ import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
+import { STUDENT_NAV } from "@/lib/student/nav-config";
 import { formatDateTime } from "@/lib/utils";
-
-const studentNav = [
-  { label: "Dashboard", href: "/student/dashboard" },
-  { label: "Prescriptions", href: "/student/prescriptions" },
-  { label: "Lab Results", href: "/student/lab-results" },
-  { label: "Appointments", href: "/student/appointments" },
-  { label: "Medical History", href: "/student/medical-history" },
-  { label: "Notifications", href: "/student/notifications" },
-];
 
 interface TimelineItem {
   kind: string;
@@ -36,7 +28,7 @@ export default function StudentTimelinePage() {
   }, []);
 
   return (
-    <DashboardShell title="Medical Timeline" subtitle="Unified view of visits, treatment, and clinical events" navItems={studentNav}>
+    <DashboardShell title="Medical Timeline" subtitle="Unified view of visits, treatment, and clinical events" navItems={STUDENT_NAV}>
       <Card>
         <CardHeader>
           <CardTitle>Timeline</CardTitle>

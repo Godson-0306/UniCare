@@ -1,5 +1,5 @@
 import type { ApiResponse } from "@/types/api";
-import type { AuthSession, AuthTokens, AuthUser, WorkstationInfo } from "@/types/auth";
+import type { AuthSession, AuthTokens, AuthUser, StudentProfile, WorkstationInfo } from "@/types/auth";
 
 import { apiUrl } from "./base-url";
 
@@ -8,6 +8,7 @@ interface LoginPayload {
   refresh: string;
   user: AuthUser;
   workstation?: WorkstationInfo;
+  profile?: StudentProfile;
 }
 
 export async function login(identifier: string, password: string): Promise<ApiResponse<LoginPayload>> {
@@ -36,6 +37,7 @@ export function toAuthSession(payload: LoginPayload): AuthSession {
     user: payload.user,
     tokens: { access: payload.access, refresh: payload.refresh },
     workstation: payload.workstation,
+    profile: payload.profile,
   };
 }
 

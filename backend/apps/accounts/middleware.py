@@ -4,6 +4,11 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
+from apps.core.responses import error_payload
+
+
+def error_response(message: str, status: int = 400, code: int | str | None = None):
+    return JsonResponse(error_payload(message, code=code or status), status=status)
 
 class HospitalNetworkAccessMiddleware(MiddlewareMixin):
   """Restrict hospital API routes to authorized networks and access tokens."""
@@ -18,16 +23,10 @@ class HospitalNetworkAccessMiddleware(MiddlewareMixin):
 
     client_ip = self._get_client_ip(request)
     if not self._ip_allowed(client_ip):
-      return JsonResponse(
-        {"success": False, "error": {"message": "Hospital system access denied: unauthorized network."}},
-        status=403,
-      )
+      return error_response("Hospital system access denied: unauthorized network.", status=403, code="network_denied")
 
     if not self._has_hospital_access_token(request):
-      return JsonResponse(
-        {"success": False, "error": {"message": "Hospital system access denied: missing access token."}},
-        status=403,
-      )
+      return error_response("Hospital system access denied: missing access token.", status=403, code="missing_hospital_access_token")
 
     return None
 

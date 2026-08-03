@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiClient } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/api/errors";
+import { studentRegistrationSchema } from "@/lib/auth/schemas";
 
 const initialForm = {
   first_name: "",
@@ -44,8 +45,23 @@ export default function RegisterPage() {
     setStatus("");
     setFieldErrors({});
 
+    const parsed = studentRegistrationSchema.safeParse(form);
+    if (!parsed.success) {
+      const nextErrors: Partial<Record<keyof typeof initialForm, string>> = {};
+      for (const issue of parsed.error.issues) {
+        const field = issue.path[0];
+        if (typeof field === "string" && field in initialForm && !nextErrors[field as keyof typeof initialForm]) {
+          nextErrors[field as keyof typeof initialForm] = issue.message;
+        }
+      }
+      setFieldErrors(nextErrors);
+      setStatus(parsed.error.issues[0]?.message ?? "Registration failed. Please review your details and try again.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const { data } = await apiClient.post("/auth/student/register/", form);
+      const { data } = await apiClient.post("/auth/student/register/", parsed.data);
       if (data.success) {
         setForm(initialForm);
         setStatus(`Registration successful for ${data.data.matric_number}. You can sign in now.`);

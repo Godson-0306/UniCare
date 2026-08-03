@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { HOSPITAL_NAV } from "@/lib/hospital/nav-config";
 import { apiClient } from "@/lib/api/client";
+import type { ApiResponse } from "@/types/api";
 
 interface StudentProfile {
   id: string;
@@ -62,7 +63,7 @@ export default function CreateVisitPage() {
     setStatus("");
     try {
       const query = searchValue ? `?query=${encodeURIComponent(searchValue)}&limit=100` : "?limit=100";
-      const { data } = await apiClient.get(`/reception/students/search/${query}`);
+      const { data } = await apiClient.get<ApiResponse<StudentProfile[]>>(`/reception/students/search/${query}`);
       if (data.success) {
         const found = Array.isArray(data.data) ? data.data : [];
         setStudents(found);

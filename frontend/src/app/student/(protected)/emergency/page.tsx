@@ -6,11 +6,7 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
-
-const studentNav = [
-  { label: "Dashboard", href: "/student/dashboard" },
-  { label: "Emergency", href: "/student/emergency" },
-];
+import { STUDENT_NAV } from "@/lib/student/nav-config";
 
 const EMERGENCY_NUMBER = process.env.NEXT_PUBLIC_EMERGENCY_NUMBER ?? "+2348000000000";
 
@@ -52,7 +48,7 @@ export default function StudentEmergencyPage() {
   }
 
   return (
-    <DashboardShell title="Emergency" navItems={studentNav}>
+    <DashboardShell title="Emergency" navItems={STUDENT_NAV}>
       <Card className="max-w-lg border-red-200">
         <CardHeader>
           <CardTitle className="text-red-800">Emergency Assistance</CardTitle>

@@ -216,7 +216,7 @@ export default function ReceptionAppointmentsPage() {
                 <option value="cancelled">Cancelled</option>
                 <option value="ongoing_treatment">Ongoing Treatment</option>
               </select>
-              <Button type="button" onClick={loadAppointments} disabled={loading}>
+              <Button type="button" onClick={() => void loadAppointments(false)} disabled={loading}>
                 {loading ? "Refreshing..." : "Refresh"}
               </Button>
             </div>

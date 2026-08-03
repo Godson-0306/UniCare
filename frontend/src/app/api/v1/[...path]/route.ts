@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:8000";
+const HOSPITAL_TOKEN =
+  process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ??
+  (process.env.NODE_ENV === "development" ? "change-hospital-access-secret" : "");
+export const HOSPITAL_PREFIXES = ["reception", "nurse", "doctor", "pharmacy", "lab", "emergency", "appointments", "audit"];
 
 async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   const subPath = pathSegments.join("/");
@@ -14,6 +18,9 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   if (authorization) headers.set("authorization", authorization);
   const hospitalToken = request.headers.get("x-hospital-access-token");
   if (hospitalToken) headers.set("x-hospital-access-token", hospitalToken);
+  if (!hospitalToken && HOSPITAL_TOKEN && HOSPITAL_PREFIXES.includes(pathSegments[0] ?? "")) {
+    headers.set("x-hospital-access-token", HOSPITAL_TOKEN);
+  }
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
   const body = hasBody ? await request.arrayBuffer() : undefined;

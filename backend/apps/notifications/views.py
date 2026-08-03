@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -35,7 +36,7 @@ class MarkNotificationReadView(APIView):
     permission_classes = [IsStudent]
 
     def post(self, request, notification_id):
-        notification = Notification.objects.get(id=notification_id, student=request.user.student_profile)
+        notification = get_object_or_404(Notification, id=notification_id, student=request.user.student_profile)
         notification.is_read = True
         notification.read_at = timezone.now()
         notification.save()

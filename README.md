@@ -7,7 +7,7 @@ Production-ready university health center management platform with a **Student P
 | Layer | Stack |
 |-------|--------|
 | Frontend | Next.js (App Router), TypeScript, Tailwind CSS, shadcn-style UI, Zustand, Axios |
-| Backend | Django 5, DRF, PostgreSQL (SQLite for local dev), Channels, Redis |
+| Backend | Django 5, DRF, PostgreSQL, Channels, Redis, Daphne |
 | Auth | JWT + refresh rotation, RBAC, hospital network middleware |
 | Core model | **Visit** — reception → nurse → doctor → pharmacy/lab |
 
@@ -50,8 +50,11 @@ npm run dev
 - Home: http://localhost:3000  
 - Sign in: http://localhost:3000/login  
 - API (proxied): http://localhost:3000/api/v1/
+- Health: http://localhost:3000/api/v1/health/
+- OpenAPI: http://localhost:3000/api/v1/schema/
+- API docs: http://localhost:3000/api/v1/docs/
 
-Stop any old `npm run dev` / `runserver` terminals before running `npm run dev` from the project root.
+Stop any old `npm run dev` / `runserver` terminals before running `npm run dev` from the project root. Local API development uses Daphne so HTTP and WebSocket behavior match Docker.
 
 ### Demo credentials
 
@@ -76,6 +79,7 @@ docker compose up --build
 ## API modules
 
 - `POST /api/v1/auth/login/` — unified login (student, workstation, admin)
+- `POST /api/v1/auth/logout/` — blacklist refresh token on sign-out
 - `POST /api/v1/auth/student/login/` — matric number login (legacy)
 - `POST /api/v1/auth/workstation/login/` — workstation login (legacy)
 - `POST /api/v1/reception/` — patient search, visit creation
@@ -85,6 +89,18 @@ docker compose up --build
 - `GET /api/v1/lab/queue/` — lab requests
 - `GET /api/v1/student/*` — student portal data
 - `POST /api/v1/student/emergency/` — emergency bypass
+- `GET /api/v1/health/` — readiness check
+- `GET /api/v1/schema/` — OpenAPI schema
+- `GET /api/v1/docs/` — Swagger UI
+
+## Tests and CI
+
+```bash
+cd backend && pytest
+cd frontend && npm run lint && npm run test
+```
+
+GitHub Actions runs backend pytest against PostgreSQL/Redis and frontend lint, Vitest, and build checks.
 
 ## Roles
 

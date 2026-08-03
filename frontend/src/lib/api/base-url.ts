@@ -19,10 +19,5 @@ export function apiUrl(...segments: string[]): string {
     .map((s) => s.replace(/^\/+|\/+$/g, ""))
     .filter(Boolean)
     .join("/");
-  return `${base}/${path}${shouldAppendTrailingSlash() ? "/" : ""}`;
-}
-
-function shouldAppendTrailingSlash(): boolean {
-  if (ENV_API_URL.startsWith("http")) return true;
-  return typeof window === "undefined";
+  return `${base}/${path}`;
 }

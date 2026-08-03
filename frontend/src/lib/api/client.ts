@@ -4,9 +4,13 @@ import { apiUrl, getApiBaseUrl } from "@/lib/api/base-url";
 import { useAuthStore } from "@/stores/auth-store";
 
 const HOSPITAL_TOKEN =
-  process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ?? "change-hospital-access-secret";
+  process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ??
+  (process.env.NODE_ENV === "development" ? "change-hospital-access-secret" : "");
+if (process.env.NODE_ENV === "production" && !HOSPITAL_TOKEN) {
+  throw new Error("NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN is required for hospital API access.");
+}
 const API_DEBUG =
-  process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_API_DEBUG === "true";
+  process.env.NEXT_PUBLIC_API_DEBUG === "true";
 
 export const apiClient = axios.create({
   timeout: 30000,
@@ -24,7 +28,7 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (tokens?.access) {
     config.headers.Authorization = `Bearer ${tokens.access}`;
   }
-  if (portal === "hospital" && path && isHospitalPath(path)) {
+  if (portal === "hospital" && path && isHospitalPath(path) && HOSPITAL_TOKEN) {
     config.headers["X-Hospital-Access-Token"] = HOSPITAL_TOKEN;
   }
   logApiRequest(config, {
@@ -36,9 +40,18 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-const HOSPITAL_PREFIXES = ["reception/", "nurse/", "doctor/", "pharmacy/", "lab/", "audit/", "emergency/"];
+const HOSPITAL_PREFIXES = [
+  "reception/",
+  "nurse/",
+  "doctor/",
+  "pharmacy/",
+  "lab/",
+  "emergency/",
+  "appointments/",
+  "audit/",
+];
 
-function isHospitalPath(path: string) {
+export function isHospitalPath(path: string) {
   return HOSPITAL_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 

@@ -2,7 +2,7 @@
 
 import { Activity, Clock3, FileText, FlaskConical, History, Loader2, RefreshCcw, Search } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useEffectEvent, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -10,10 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { useRealtimeRefresh } from "@/hooks/use-realtime-refresh";
 import { apiClient } from "@/lib/api/client";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { HOSPITAL_NAV } from "@/lib/hospital/nav-config";
-import { getNotificationsWebSocketUrl } from "@/lib/realtime";
 import { formatDateTime } from "@/lib/utils";
 
 type LabStatus = "pending" | "in_progress" | "completed" | "cancelled";
@@ -88,7 +88,7 @@ export default function LaboratoryQueueDashboardPage() {
   const [sort, setSort] = useState<LabSort>("oldest");
   const [error, setError] = useState("");
 
-  async function loadQueue(showLoading = true) {
+  const loadQueue = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     else setRefreshing(true);
     setError("");
@@ -105,29 +105,14 @@ export default function LaboratoryQueueDashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }
-
-  const refreshQueue = useEffectEvent((showLoading = false) => {
-    void loadQueue(showLoading);
-  });
+  }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => refreshQueue(true), 0);
+    const timer = window.setTimeout(() => void loadQueue(true), 0);
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [loadQueue]);
 
-  useEffect(() => {
-    const socketUrl = getNotificationsWebSocketUrl();
-    if (!socketUrl) return;
-    const socket = new WebSocket(socketUrl);
-    socket.onmessage = (event) => {
-      const payload = JSON.parse(event.data) as { event?: string };
-      if (payload.event?.startsWith("lab.") || payload.event === "consultation.saved") {
-        refreshQueue(false);
-      }
-    };
-    return () => socket.close();
-  }, []);
+  useRealtimeRefresh(loadQueue, ["lab.", "consultation.saved"]);
 
   const filteredRequests = useMemo(() => {
     const normalized = query.trim().toLowerCase();

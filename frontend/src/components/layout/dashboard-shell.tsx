@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { LogOut, Menu, X, Bell } from "lucide-react";
 import { useState } from "react";
@@ -25,9 +25,15 @@ interface DashboardShellProps {
 
 export function DashboardShell({ title, subtitle, navItems, hideSidebar = false, children }: DashboardShellProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, workstation, profile, logout } = useAuthStore();
   const [mobileOpen, setMobileOpen] = useState(false);
   const showSidebar = !hideSidebar && navItems.length > 0;
+
+  function handleLogout() {
+    logout();
+    router.replace("/login");
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -56,7 +62,7 @@ export function DashboardShell({ title, subtitle, navItems, hideSidebar = false,
           </div>
 
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={logout}>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign out</span>
             </Button>

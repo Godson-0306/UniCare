@@ -8,26 +8,27 @@ import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/api/client";
+import { STUDENT_NAV } from "@/lib/student/nav-config";
 import type { ApiResponse } from "@/types/api";
 import WelcomeCard from "@/components/student/WelcomeCard";
 import StatGrid from "@/components/student/StatGrid";
 import QuickActions from "@/components/student/QuickActions";
-import EmptyState from "@/components/student/EmptyState";
 import { useAuthStore } from "@/stores/auth-store";
+import type { StudentProfile } from "@/types/auth";
 
-const studentNav = [
-  { label: "Dashboard", href: "/student/dashboard" },
-  { label: "Prescriptions", href: "/student/prescriptions" },
-  { label: "Lab Results", href: "/student/lab-results" },
-  { label: "Appointments", href: "/student/appointments" },
-  { label: "Medical History", href: "/student/medical-history" },
-  { label: "Notifications", href: "/student/notifications" },
-];
+interface MedicalProfileData extends Partial<StudentProfile> {
+  student?: Partial<StudentProfile> & {
+    medical_notes?: string;
+  };
+}
+
+interface VisitSummary {
+  registered_at: string;
+}
 
 export default function StudentDashboardPage() {
   const authProfile = useAuthStore((s) => s.profile);
-  const setAuthProfile = useAuthStore((s) => s.setProfile);
-  const [profile, setProfile] = useState<any | null>(authProfile ?? null);
+  const [profile, setProfile] = useState<MedicalProfileData | null>(authProfile ?? null);
   const [lastVisit, setLastVisit] = useState<string | null>(null);
   const [stats, setStats] = useState({ prescriptions: 0, labResults: 0, appointments: 0, unread: 0 });
 
@@ -39,8 +40,8 @@ export default function StudentDashboardPage() {
           apiClient.get<ApiResponse<unknown[]>>("/student/lab-results/"),
           apiClient.get<ApiResponse<unknown[]>>("/student/appointments/"),
           apiClient.get<ApiResponse<{ is_read: boolean }[]>>("/student/notifications/"),
-          apiClient.get<ApiResponse<any>>("/student/medical-profile/"),
-          apiClient.get<ApiResponse<any[]>>("/student/medical-history/"),
+          apiClient.get<ApiResponse<MedicalProfileData>>("/student/medical-profile/"),
+          apiClient.get<ApiResponse<VisitSummary[]>>("/student/medical-history/"),
         ]);
         setStats({
           prescriptions: rx.data.success ? rx.data.data.length : 0,
@@ -50,16 +51,11 @@ export default function StudentDashboardPage() {
         });
         if (medProfileRes.data.success) {
           setProfile(medProfileRes.data.data);
-          try {
-            setAuthProfile(medProfileRes.data.data);
-          } catch {
-            /* ignore if store update fails */
-          }
         }
         if (visitsRes.data.success && Array.isArray(visitsRes.data.data) && visitsRes.data.data.length > 0) {
           const sorted = visitsRes.data.data
             .slice()
-            .sort((a: any, b: any) => new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime());
+            .sort((a, b) => new Date(b.registered_at).getTime() - new Date(a.registered_at).getTime());
           setLastVisit(new Date(sorted[0].registered_at).toLocaleString());
         }
       
@@ -77,7 +73,7 @@ export default function StudentDashboardPage() {
     { label: "Unread Alerts", value: stats.unread, href: "/student/notifications", icon: Bell },
   ];
   return (
-    <DashboardShell title="Student Portal" subtitle="Your health records at a glance" navItems={studentNav}>
+    <DashboardShell title="Student Portal" subtitle="Your health records at a glance" navItems={STUDENT_NAV}>
       <div className="space-y-6">
         <Card className="border-red-200 bg-red-50">
           <CardHeader className="flex flex-row items-center justify-between">

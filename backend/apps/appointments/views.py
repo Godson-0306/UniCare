@@ -1,12 +1,14 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.appointments.serializers import (
     AppointmentDetailSerializer,
     AppointmentListQuerySerializer,
+    AppointmentUpdateSerializer,
 )
 from apps.appointments.models import Appointment
-from apps.core.permissions import IsHospitalStaff
+from apps.core.permissions import IsHospitalStaff, assert_staff_can_access_visit
 from apps.appointments.services import AppointmentService
 from apps.appointments.serializers import AppointmentWriteSerializer
 from apps.accounts.models import StudentProfile
@@ -35,20 +37,15 @@ class AppointmentCreateView(APIView):
         serializer = AppointmentWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        try:
-            student = StudentProfile.objects.get(matric_number=data["matric_number"])
-        except StudentProfile.DoesNotExist:
-            raise NotFound("Student with provided matric number not found")
+        student = get_object_or_404(StudentProfile, matric_number=data["matric_number"])
 
         visit = None
         visit_id = data.get("visit_id")
         if visit_id:
-            try:
-                from apps.visits.models import Visit
+            from apps.visits.models import Visit
 
-                visit = Visit.objects.get(id=visit_id)
-            except Exception:
-                visit = None
+            visit = get_object_or_404(Visit, id=visit_id)
+            assert_staff_can_access_visit(request.user, visit)
 
         appointment = AppointmentService.create_reception_appointment(
             student=student,
@@ -79,17 +76,12 @@ class AppointmentDetailView(APIView):
 
     def put(self, request, appointment_id):
         appointment = self.get_object(appointment_id)
-        serializer = AppointmentDetailSerializer(appointment)
-        # Allow partial updates to status and notes
-        status_val = request.data.get("status")
-        notes = request.data.get("notes")
-        changed = False
-        if status_val:
-            appointment.status = status_val
-            changed = True
-        if notes is not None:
-            appointment.notes = notes
-            changed = True
-        if changed:
+        serializer = AppointmentUpdateSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        if "status" in serializer.validated_data:
+            appointment.status = serializer.validated_data["status"]
+        if "notes" in serializer.validated_data:
+            appointment.notes = serializer.validated_data["notes"]
+        if serializer.validated_data:
             appointment.save()
         return Response({"success": True, "data": AppointmentDetailSerializer(appointment).data})

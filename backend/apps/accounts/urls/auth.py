@@ -3,6 +3,7 @@ from django.urls import path
 from apps.accounts.views.auth_views import (
     AdminLoginView,
     CustomTokenRefreshView,
+    LogoutView,
     StudentLoginView,
     StudentRegistrationView,
     UnifiedLoginView,
@@ -16,4 +17,5 @@ urlpatterns = [
     path("workstation/login/", WorkstationLoginView.as_view(), name="workstation-login"),
     path("admin/login/", AdminLoginView.as_view(), name="admin-login"),
     path("token/refresh/", CustomTokenRefreshView.as_view(), name="token-refresh"),
+    path("logout/", LogoutView.as_view(), name="logout"),
 ]

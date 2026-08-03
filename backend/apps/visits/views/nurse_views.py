@@ -1,9 +1,10 @@
 from django.db.models import Prefetch
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.core.permissions import IsNurse
+from apps.core.permissions import IsNurse, assert_staff_can_access_visit
 from apps.visits.constants import QueueStage, QueueStatus, VisitStatus
 from apps.visits.models import QueueEntry, Visit, Vitals
 from apps.visits.serializers import NurseQueueVisitSerializer, QueueEntrySerializer, RecordVitalsSerializer, VisitDetailSerializer
@@ -38,7 +39,8 @@ class RecordVitalsView(APIView):
     def post(self, request):
         serializer = RecordVitalsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = Visit.objects.select_related("student").get(id=serializer.validated_data["visit_id"])
+        visit = get_object_or_404(Visit.objects.select_related("student"), id=serializer.validated_data["visit_id"])
+        assert_staff_can_access_visit(request.user, visit)
         vitals = Vitals.objects.create(
             visit=visit,
             performed_by=request.user,
@@ -71,7 +73,11 @@ class NurseVisitDetailView(APIView):
     permission_classes = [IsNurse]
 
     def get(self, request, visit_id):
-        visit = Visit.objects.select_related("student", "consultation").prefetch_related("vitals_records").get(id=visit_id)
+        visit = get_object_or_404(
+            Visit.objects.select_related("student", "consultation").prefetch_related("vitals_records"),
+            id=visit_id,
+        )
+        assert_staff_can_access_visit(request.user, visit)
         return Response({"success": True, "data": VisitDetailSerializer(visit).data})
 
 
@@ -87,7 +93,8 @@ class ForwardToDoctorView(APIView):
     permission_classes = [IsNurse]
 
     def post(self, request, visit_id):
-        visit = Visit.objects.get(id=visit_id)
+        visit = get_object_or_404(Visit, id=visit_id)
+        assert_staff_can_access_visit(request.user, visit)
         VisitService.forward_to_doctor(visit, request.user)
         return Response({"success": True, "message": "Patient forwarded to doctor queue."})
 
@@ -96,7 +103,8 @@ class StartQueueEntryView(APIView):
     permission_classes = [IsNurse]
 
     def post(self, request, entry_id):
-        entry = QueueEntry.objects.get(id=entry_id, stage=QueueStage.NURSE)
+        entry = get_object_or_404(QueueEntry.objects.select_related("visit"), id=entry_id, stage=QueueStage.NURSE)
+        assert_staff_can_access_visit(request.user, entry.visit)
         VisitService.start_queue_entry(entry, request.user)
         return Response({"success": True, "data": QueueEntrySerializer(entry).data})
 
@@ -105,7 +113,8 @@ class AdjustVisitPriorityView(APIView):
     permission_classes = [IsNurse]
 
     def post(self, request, visit_id):
-        visit = Visit.objects.get(id=visit_id)
+        visit = get_object_or_404(Visit, id=visit_id)
+        assert_staff_can_access_visit(request.user, visit)
         priority = request.data.get("priority", "normal")
         reason = request.data.get("reason", "")
         VisitService.adjust_priority(visit, priority, request.user, reason=reason)

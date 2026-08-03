@@ -4,6 +4,7 @@ import type { UserRole } from "@/types/auth";
 export const HOSPITAL_NAV: Record<UserRole, NavItem[]> = {
   receptionist: [
     { label: "Patient Search", href: "/hospital/reception" },
+    { label: "Chat", href: "/hospital/reception/chat" },
     { label: "Appointments", href: "/hospital/reception/appointments" },
   ],
   nurse: [

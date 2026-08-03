@@ -2,8 +2,9 @@
   "name": "unicare",
   "private": true,
   "scripts": {
-    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web\"",
-    "dev:api": "cd backend && python manage.py runserver 127.0.0.1:8000",
+    "dev": "npm run dev:clean && concurrently -k -n api,web -c blue,green \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:clean": "node scripts/kill-dev-ports.mjs",
+    "dev:api": "cd backend && daphne -b 127.0.0.1 -p 8000 config.asgi:application",
     "dev:web": "cd frontend && npm run dev",
     "install:all": "cd frontend && npm install"
   },

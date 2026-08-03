@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -36,6 +37,6 @@ class ResolveEmergencyView(APIView):
     permission_classes = [IsDutyOfficer]
 
     def post(self, request, event_id):
-        event = EmergencyEvent.objects.get(id=event_id)
+        event = get_object_or_404(EmergencyEvent, id=event_id)
         EmergencyService.resolve(event, request.user)
         return Response({"success": True, "message": "Emergency resolved."})

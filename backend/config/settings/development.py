@@ -1,3 +1,10 @@
+import os
+
+os.environ.setdefault("SECRET_KEY", "django-insecure-unicare-local-dev-secret-key")
+os.environ.setdefault("DEBUG", "True")
+os.environ.setdefault("DATABASE_URL", "sqlite:///db.sqlite3")
+os.environ.setdefault("HOSPITAL_ACCESS_SECRET", "change-hospital-access-secret")
+
 from .base import *  # noqa: F403, F401
 
 DEBUG = True

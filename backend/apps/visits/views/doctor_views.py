@@ -1,5 +1,6 @@
 from django.db import transaction
 from django.db.models import Max
+from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -22,7 +23,7 @@ from apps.clinical.services.medical_profile_service import MedicalProfileService
 from apps.clinical.services.prescription_service import PrescriptionService
 from apps.clinical.services.timeline_service import TimelineService
 from apps.clinical.services.treatment_plan_service import TreatmentPlanService
-from apps.core.permissions import IsDoctor
+from apps.core.permissions import IsDoctor, assert_staff_can_access_student, assert_staff_can_access_visit
 from apps.core.realtime import RealtimeEventService
 from apps.visits.constants import QueueStage, QueueStatus, VisitStatus
 from apps.visits.models import Consultation, QueueEntry, Visit
@@ -48,7 +49,11 @@ class VisitDetailView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, visit_id):
-        visit = Visit.objects.select_related("student", "consultation").prefetch_related("vitals_records").get(id=visit_id)
+        visit = get_object_or_404(
+            Visit.objects.select_related("student", "consultation").prefetch_related("vitals_records"),
+            id=visit_id,
+        )
+        assert_staff_can_access_visit(request.user, visit)
         AuditService.log_access(
             performed_by=request.user,
             entity_type="visit",
@@ -63,7 +68,8 @@ class StudentMedicalHistoryView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, student_id):
-        student = StudentProfile.objects.get(id=student_id)
+        student = get_object_or_404(StudentProfile, id=student_id)
+        assert_staff_can_access_student(request.user, student)
         visits = Visit.objects.filter(student=student).select_related("consultation").order_by("-registered_at")[:50]
         AuditService.log_access(
             performed_by=request.user,
@@ -78,7 +84,8 @@ class StudentMedicalProfileView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, student_id):
-        student = StudentProfile.objects.get(id=student_id)
+        student = get_object_or_404(StudentProfile, id=student_id)
+        assert_staff_can_access_student(request.user, student)
         records = StudentMedicalRecord.objects.filter(student=student).select_related("visit", "performed_by")
         # Build a small summary for fast doctor-side display
         active_records = records.filter(is_active=True)
@@ -130,7 +137,8 @@ class StudentFollowUpsView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, student_id):
-        student = StudentProfile.objects.get(id=student_id)
+        student = get_object_or_404(StudentProfile, id=student_id)
+        assert_staff_can_access_student(request.user, student)
         followups = FollowUp.objects.filter(patient=student).select_related("doctor", "visit").order_by("-scheduled_date")
         AuditService.log_access(
             performed_by=request.user,
@@ -145,7 +153,8 @@ class StudentTimelineView(APIView):
     permission_classes = [IsDoctor]
 
     def get(self, request, student_id):
-        student = StudentProfile.objects.get(id=student_id)
+        student = get_object_or_404(StudentProfile, id=student_id)
+        assert_staff_can_access_student(request.user, student)
         AuditService.log_access(
             performed_by=request.user,
             entity_type="student_timeline",
@@ -158,13 +167,15 @@ class StudentMedicalRecordCreateView(APIView):
     permission_classes = [IsDoctor]
 
     def post(self, request, student_id):
-        student = StudentProfile.objects.get(id=student_id)
+        student = get_object_or_404(StudentProfile, id=student_id)
+        assert_staff_can_access_student(request.user, student)
         serializer = StudentMedicalRecordWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         visit = None
         visit_id = serializer.validated_data.get("visit_id")
         if visit_id:
-            visit = Visit.objects.get(id=visit_id, student=student)
+            visit = get_object_or_404(Visit, id=visit_id, student=student)
+            assert_staff_can_access_visit(request.user, visit)
         record = MedicalProfileService.create_record(
             student=student,
             visit=visit,
@@ -182,13 +193,15 @@ class StudentMedicalRecordUpdateView(APIView):
     permission_classes = [IsDoctor]
 
     def patch(self, request, record_id):
-        record = StudentMedicalRecord.objects.select_related("student", "visit").get(id=record_id)
+        record = get_object_or_404(StudentMedicalRecord.objects.select_related("student", "visit"), id=record_id)
+        assert_staff_can_access_student(request.user, record.student)
         serializer = StudentMedicalRecordWriteSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         updates = serializer.validated_data.copy()
         visit_id = updates.pop("visit_id", None)
         if visit_id:
-            updates["visit"] = Visit.objects.get(id=visit_id, student=record.student)
+            updates["visit"] = get_object_or_404(Visit, id=visit_id, student=record.student)
+            assert_staff_can_access_visit(request.user, updates["visit"])
         updated = MedicalProfileService.update_record(record=record, performed_by=request.user, **updates)
         return Response({"success": True, "data": StudentMedicalRecordSerializer(updated).data})
 
@@ -200,7 +213,8 @@ class SaveConsultationView(APIView):
     def post(self, request):
         serializer = ConsultationWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = Visit.objects.select_related("student").get(id=serializer.validated_data["visit_id"])
+        visit = get_object_or_404(Visit.objects.select_related("student"), id=serializer.validated_data["visit_id"])
+        assert_staff_can_access_visit(request.user, visit)
         physical_exam = serializer.validated_data.get("physical_exam", {})
         treatment_plan = serializer.validated_data.get("treatment_plan", {})
         diagnosis = serializer.validated_data.get("primary_diagnosis") or serializer.validated_data.get("diagnosis", "")
@@ -448,7 +462,8 @@ class CreatePrescriptionView(APIView):
     def post(self, request):
         serializer = CreatePrescriptionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = Visit.objects.get(id=serializer.validated_data["visit_id"])
+        visit = get_object_or_404(Visit, id=serializer.validated_data["visit_id"])
+        assert_staff_can_access_visit(request.user, visit)
         prescription = PrescriptionService.create_prescription(
             visit=visit,
             items=serializer.validated_data["items"],
@@ -467,7 +482,8 @@ class CreateLabRequestView(APIView):
     def post(self, request):
         serializer = CreateLabRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = Visit.objects.get(id=serializer.validated_data["visit_id"])
+        visit = get_object_or_404(Visit, id=serializer.validated_data["visit_id"])
+        assert_staff_can_access_visit(request.user, visit)
         tests = serializer.validated_data.get("tests")
         lab_request = LabService.create_request(
             visit=visit,
@@ -489,7 +505,8 @@ class CreateTreatmentScheduleView(APIView):
     def post(self, request):
         serializer = TreatmentScheduleWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = Visit.objects.select_related("student").get(id=serializer.validated_data["visit_id"])
+        visit = get_object_or_404(Visit.objects.select_related("student"), id=serializer.validated_data["visit_id"])
+        assert_staff_can_access_visit(request.user, visit)
         schedule = TreatmentPlanService.create_plan(
             visit=visit,
             schedule_type=serializer.validated_data["schedule_type"],
@@ -515,7 +532,8 @@ class CreateFollowUpAppointmentView(APIView):
     def post(self, request):
         serializer = FollowUpAppointmentWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        visit = Visit.objects.select_related("student").get(id=serializer.validated_data["visit_id"])
+        visit = get_object_or_404(Visit.objects.select_related("student"), id=serializer.validated_data["visit_id"])
+        assert_staff_can_access_visit(request.user, visit)
         appointment = AppointmentService.create_follow_up(
             visit=visit,
             title=serializer.validated_data.get("title", "Follow-up"),

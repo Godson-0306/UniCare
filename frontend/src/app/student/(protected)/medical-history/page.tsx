@@ -5,9 +5,10 @@ import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
+import { STUDENT_NAV } from "@/lib/student/nav-config";
 import { formatDateTime } from "@/lib/utils";
 
-function VisitItem({ visit }: { visit: any }) {
+function VisitItem({ visit }: { visit: VisitHistoryItem }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="rounded-lg border border-slate-200 p-4 text-sm">
@@ -30,15 +31,6 @@ function VisitItem({ visit }: { visit: any }) {
     </div>
   );
 }
-
-const studentNav = [
-  { label: "Dashboard", href: "/student/dashboard" },
-  { label: "Prescriptions", href: "/student/prescriptions" },
-  { label: "Lab Results", href: "/student/lab-results" },
-  { label: "Appointments", href: "/student/appointments" },
-  { label: "Medical History", href: "/student/medical-history" },
-  { label: "Notifications", href: "/student/notifications" },
-];
 
 interface MedicalRecord {
   id: string;
@@ -100,7 +92,7 @@ export default function StudentMedicalHistoryPage() {
   ];
 
   return (
-    <DashboardShell title="Medical History" navItems={studentNav}>
+    <DashboardShell title="Medical History" navItems={STUDENT_NAV}>
       <div className="space-y-6">
         <Card>
           <CardHeader>

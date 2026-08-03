@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "django_filters",
+    "drf_spectacular",
     "channels",
     "apps.core",
     "apps.accounts",
@@ -139,8 +140,7 @@ REST_FRAMEWORK = {
         "rest_framework.filters.SearchFilter",
         "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.StandardResultsSetPagination",
-    "PAGE_SIZE": 25,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
     ),
@@ -177,14 +177,23 @@ HOSPITAL_ALLOWED_IP_RANGES = env.list(
 HOSPITAL_ACCESS_HEADER = env("HOSPITAL_ACCESS_HEADER", default="X-Hospital-Access-Token")
 HOSPITAL_ACCESS_SECRET = env("HOSPITAL_ACCESS_SECRET", default="change-hospital-access-secret")
 HOSPITAL_API_PREFIXES = (
+    "/api/v1/accounts/",
     "/api/v1/reception/",
     "/api/v1/nurse/",
     "/api/v1/doctor/",
     "/api/v1/pharmacy/",
     "/api/v1/lab/",
     "/api/v1/emergency/",
+    "/api/v1/appointments/",
     "/api/v1/audit/",
 )
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "UniCare API",
+    "DESCRIPTION": "Role-scoped API for UniCare student and hospital workflows.",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
+}
 
 AUDIT_LOG_ENABLED = env.bool("AUDIT_LOG_ENABLED")
 

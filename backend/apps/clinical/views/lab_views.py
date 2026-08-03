@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.shortcuts import get_object_or_404
 from django.db.models import Count, Prefetch, Q
 from django.utils import timezone
 from rest_framework import status
@@ -15,7 +16,7 @@ from apps.clinical.serializers import (
     UploadLabResultSerializer,
 )
 from apps.clinical.services.lab_service import LabService
-from apps.core.permissions import IsLabTechnician
+from apps.core.permissions import IsLabTechnician, assert_staff_can_access_student, assert_staff_can_access_visit
 
 
 class LabQueueView(APIView):
@@ -81,11 +82,13 @@ class LabRequestDetailView(APIView):
     permission_classes = [IsLabTechnician]
 
     def get(self, request, request_id):
-        lab_request = (
+        lab_request = get_object_or_404(
             LabRequest.objects.select_related("visit", "visit__student", "performed_by", "result")
             .prefetch_related(Prefetch("tests", queryset=LabRequestTest.objects.select_related("performed_by").order_by("created_at")))
-            .get(id=request_id)
+            ,
+            id=request_id,
         )
+        assert_staff_can_access_visit(request.user, lab_request.visit)
         return Response({"success": True, "data": LabRequestSerializer(lab_request).data})
 
 
@@ -99,6 +102,9 @@ class StudentLabHistoryView(APIView):
             .prefetch_related(Prefetch("tests", queryset=LabRequestTest.objects.select_related("performed_by").order_by("created_at")))
             .order_by("-requested_at")[:100]
         )
+        first_request = requests.first()
+        if first_request:
+            assert_staff_can_access_student(request.user, first_request.visit.student)
         return Response({"success": True, "data": LabRequestSerializer(requests, many=True).data})
 
 
@@ -108,7 +114,8 @@ class UploadLabResultView(APIView):
     def post(self, request, request_id):
         serializer = UploadLabResultSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        lab_request = LabRequest.objects.prefetch_related("tests").select_related("visit").get(id=request_id)
+        lab_request = get_object_or_404(LabRequest.objects.prefetch_related("tests").select_related("visit"), id=request_id)
+        assert_staff_can_access_visit(request.user, lab_request.visit)
         result = LabService.upload_result(
             lab_request=lab_request,
             result_summary=serializer.validated_data["result_summary"],
@@ -140,10 +147,12 @@ class SaveLabTestResultView(APIView):
     def post(self, request, request_id, test_id):
         serializer = SaveLabTestResultSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        lab_test = LabRequestTest.objects.select_related("lab_request", "lab_request__visit").get(
+        lab_test = get_object_or_404(
+            LabRequestTest.objects.select_related("lab_request", "lab_request__visit"),
             id=test_id,
             lab_request_id=request_id,
         )
+        assert_staff_can_access_visit(request.user, lab_test.lab_request.visit)
         updated = LabService.save_test_result(
             lab_test=lab_test,
             result_value=serializer.validated_data.get("result_value", ""),

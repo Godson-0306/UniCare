@@ -1,5 +1,7 @@
 # Dependencies
 node_modules/
+.pytest_cache/
+pytest-cache-files-*/
 __pycache__/
 *.py[cod]
 .venv/
