@@ -5,6 +5,8 @@
   --foreground: #0f172a;
   --primary: #0d9488;
   --primary-foreground: #ffffff;
+  --font-geist-sans: Arial, Helvetica, sans-serif;
+  --font-geist-mono: "Courier New", Courier, monospace;
 }
 
 @theme inline {

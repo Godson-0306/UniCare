@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+.codex-tools/
 .pytest_cache/
 pytest-cache-files-*/
 __pycache__/

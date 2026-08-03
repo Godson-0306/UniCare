@@ -109,6 +109,7 @@ CORS_ALLOWED_ORIGINS = env.list(
     default=["http://localhost:3000", "http://127.0.0.1:3000"],
 )
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:3000")
 
 REDIS_URL = env("REDIS_URL", default="redis://localhost:6379/0")

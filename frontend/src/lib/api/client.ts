@@ -6,9 +6,6 @@ import { useAuthStore } from "@/stores/auth-store";
 const HOSPITAL_TOKEN =
   process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ??
   (process.env.NODE_ENV === "development" ? "change-hospital-access-secret" : "");
-if (process.env.NODE_ENV === "production" && !HOSPITAL_TOKEN) {
-  throw new Error("NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN is required for hospital API access.");
-}
 const API_DEBUG =
   process.env.NEXT_PUBLIC_API_DEBUG === "true";
 
