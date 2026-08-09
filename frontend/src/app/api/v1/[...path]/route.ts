@@ -11,7 +11,17 @@ const HOSPITAL_TOKEN =
     : process.env.NODE_ENV === "development"
       ? "change-hospital-access-secret"
       : "");
-export const HOSPITAL_PREFIXES = ["reception", "nurse", "doctor", "pharmacy", "lab", "emergency", "appointments", "audit"];
+export const HOSPITAL_PREFIXES = [
+  "reception",
+  "nurse",
+  "doctor",
+  "pharmacy",
+  "lab",
+  "emergency",
+  "appointments",
+  "audit",
+  "admin",
+];
 
 function unavailableResponse() {
   const message =

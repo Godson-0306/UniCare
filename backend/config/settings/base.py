@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     "apps.emergency",
     "apps.chat",
     "apps.audit",
+    "apps.admin_console",
 ]
 
 MIDDLEWARE = [
@@ -189,6 +190,7 @@ HOSPITAL_API_PREFIXES = (
     "/api/v1/emergency/",
     "/api/v1/appointments/",
     "/api/v1/audit/",
+    "/api/v1/admin/",
 )
 
 SPECTACULAR_SETTINGS = {
