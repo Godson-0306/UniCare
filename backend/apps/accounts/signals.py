@@ -1,4 +1,7 @@
-from django.db.models.signals import post_save
+import os
+
+from django.core.management import call_command
+from django.db.models.signals import post_migrate, post_save
 from django.dispatch import receiver
 
 from apps.accounts.constants import AccountType, Role
@@ -23,3 +26,24 @@ def ensure_profile_exists(sender, instance, created, **kwargs):
             station_code=instance.username,
             assigned_role=instance.role,
         )
+
+
+_seed_connected = False
+
+
+def connect_seed_on_migrate():
+    global _seed_connected
+    if _seed_connected:
+        return
+    post_migrate.connect(_seed_demo_after_migrate, dispatch_uid="unicare_seed_demo_on_migrate")
+    _seed_connected = True
+
+
+def _seed_demo_after_migrate(sender, app_config, **kwargs):
+    if os.environ.get("SEED_DEMO_ON_BOOT") != "true":
+        return
+    if app_config.name != "apps.accounts":
+        return
+    if User.objects.filter(username="U2024001").exists():
+        return
+    call_command("seed_demo_data")

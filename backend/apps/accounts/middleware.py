@@ -21,12 +21,21 @@ class HospitalNetworkAccessMiddleware(MiddlewareMixin):
     if self._is_exempt_auth_route(path):
       return None
 
-    client_ip = self._get_client_ip(request)
-    if not self._ip_allowed(client_ip):
-      return error_response("Hospital system access denied: unauthorized network.", status=403, code="network_denied")
+    if settings.HOSPITAL_NETWORK_ENFORCEMENT:
+      client_ip = self._get_client_ip(request)
+      if not self._ip_allowed(client_ip):
+        return error_response(
+          "Hospital system access denied: unauthorized network.",
+          status=403,
+          code="network_denied",
+        )
 
     if not self._has_hospital_access_token(request):
-      return error_response("Hospital system access denied: missing access token.", status=403, code="missing_hospital_access_token")
+      return error_response(
+        "Hospital system access denied: missing access token.",
+        status=403,
+        code="missing_hospital_access_token",
+      )
 
     return None
 

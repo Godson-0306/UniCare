@@ -175,6 +175,8 @@ HOSPITAL_ALLOWED_IP_RANGES = env.list(
     "HOSPITAL_ALLOWED_IP_RANGES",
     default=["127.0.0.0/8", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"],
 )
+# When False (typical for Vercel BFF → Render), only the hospital access token is enforced.
+HOSPITAL_NETWORK_ENFORCEMENT = env.bool("HOSPITAL_NETWORK_ENFORCEMENT", default=True)
 HOSPITAL_ACCESS_HEADER = env("HOSPITAL_ACCESS_HEADER", default="X-Hospital-Access-Token")
 HOSPITAL_ACCESS_SECRET = env("HOSPITAL_ACCESS_SECRET", default="change-hospital-access-secret")
 HOSPITAL_API_PREFIXES = (

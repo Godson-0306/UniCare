@@ -6,7 +6,8 @@ if HOSPITAL_ACCESS_SECRET == "change-hospital-access-secret":  # noqa: F405
     raise RuntimeError("HOSPITAL_ACCESS_SECRET must be set for production.")
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
-SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=True)  # noqa: F405
+# Render terminates TLS at the edge and probes health checks over HTTP on $PORT.
+SECURE_SSL_REDIRECT = env.bool("SECURE_SSL_REDIRECT", default=False)  # noqa: F405
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True

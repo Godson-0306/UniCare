@@ -70,6 +70,47 @@ Stop any old `npm run dev` / `runserver` terminals before running `npm run dev` 
 
 Hospital API calls require header `X-Hospital-Access-Token` (set in `.env` / `NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN`).
 
+## Production hosting (Vercel frontend + Render API)
+
+| Layer | Host | URL pattern |
+|-------|------|-------------|
+| Frontend (Next.js) | Vercel | `https://frontend-henna-ten-69.vercel.app` |
+| API + WebSockets | Render | `https://unicare-backend.onrender.com` |
+| Postgres + Redis | Render | provisioned by `render.yaml` |
+
+Browser calls stay same-origin on Vercel (`/api/v1/*`). The Next.js route handler proxies to Render using `BACKEND_INTERNAL_URL`. WebSockets connect directly to Render via `NEXT_PUBLIC_WS_URL`.
+
+### 1. Deploy backend on Render
+
+1. Merge this repo (including `render.yaml`) to GitHub.
+2. Open the Blueprint deeplink:  
+   https://dashboard.render.com/blueprint/new?repo=https://github.com/Godson-0306/UniCare
+3. Apply the Blueprint (creates `unicare-backend`, `unicare-db`, `unicare-redis`).
+4. When prompted, set `HOSPITAL_ACCESS_SECRET` to a strong shared secret (you will reuse it on Vercel).
+5. After the first deploy is live, confirm health at `https://unicare-backend.onrender.com/api/v1/health/`.
+
+### 2. Configure Vercel project env
+
+In the Vercel project that serves `frontend/` set:
+
+| Variable | Value |
+|----------|--------|
+| `BACKEND_INTERNAL_URL` | `https://unicare-backend.onrender.com` |
+| `NEXT_PUBLIC_API_URL` | `/api/v1` |
+| `NEXT_PUBLIC_WS_URL` | `wss://unicare-backend.onrender.com` |
+| `NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN` | same value as Render `HOSPITAL_ACCESS_SECRET` |
+
+Root Directory on Vercel must be `frontend`. Redeploy after saving env vars.
+
+### 3. Smoke checks
+
+- UI: https://frontend-henna-ten-69.vercel.app
+- Proxied health: https://frontend-henna-ten-69.vercel.app/api/v1/health
+- Direct API health: https://unicare-backend.onrender.com/api/v1/health/
+- Sign-in with demo credentials after seeding (`python manage.py seed_demo_data` via Render shell if needed)
+
+Free Render web services spin down after inactivity; the first request after idle can take ~30–60s.
+
 ## Docker (PostgreSQL + Redis)
 
 ```bash

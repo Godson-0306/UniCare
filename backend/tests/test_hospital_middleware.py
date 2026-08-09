@@ -1,3 +1,5 @@
+import json
+
 from django.test import RequestFactory, override_settings
 
 from apps.accounts.middleware import HospitalNetworkAccessMiddleware
@@ -16,6 +18,7 @@ def _middleware_response(path, remote_addr="203.0.113.5", token=None):
     HOSPITAL_API_PREFIXES=("/api/v1/appointments/",),
     HOSPITAL_ALLOWED_IP_RANGES=("10.0.0.0/8",),
     HOSPITAL_ACCESS_SECRET="secret",
+    HOSPITAL_NETWORK_ENFORCEMENT=True,
 )
 def test_hospital_middleware_denies_appointments_from_public_network():
     response = _middleware_response("/api/v1/appointments/")
@@ -27,8 +30,34 @@ def test_hospital_middleware_denies_appointments_from_public_network():
     HOSPITAL_API_PREFIXES=("/api/v1/appointments/",),
     HOSPITAL_ALLOWED_IP_RANGES=("10.0.0.0/8",),
     HOSPITAL_ACCESS_SECRET="secret",
+    HOSPITAL_NETWORK_ENFORCEMENT=True,
 )
 def test_hospital_middleware_allows_authorized_hospital_request():
     response = _middleware_response("/api/v1/appointments/", remote_addr="10.1.2.3", token="secret")
 
     assert response is None
+
+
+@override_settings(
+    HOSPITAL_API_PREFIXES=("/api/v1/appointments/",),
+    HOSPITAL_ALLOWED_IP_RANGES=("10.0.0.0/8",),
+    HOSPITAL_ACCESS_SECRET="secret",
+    HOSPITAL_NETWORK_ENFORCEMENT=False,
+)
+def test_hospital_middleware_skips_ip_check_when_enforcement_disabled():
+    response = _middleware_response("/api/v1/appointments/", remote_addr="203.0.113.5", token="secret")
+
+    assert response is None
+
+
+@override_settings(
+    HOSPITAL_API_PREFIXES=("/api/v1/appointments/",),
+    HOSPITAL_ALLOWED_IP_RANGES=("0.0.0.0/0",),
+    HOSPITAL_ACCESS_SECRET="secret",
+    HOSPITAL_NETWORK_ENFORCEMENT=False,
+)
+def test_hospital_middleware_still_requires_token_when_ip_enforcement_off():
+    response = _middleware_response("/api/v1/appointments/", remote_addr="203.0.113.5")
+
+    assert response.status_code == 403
+    assert json.loads(response.content)["error"]["code"] == "missing_hospital_access_token"

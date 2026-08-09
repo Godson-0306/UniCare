@@ -7,3 +7,6 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         import apps.accounts.signals  # noqa: F401
+        from apps.accounts.signals import connect_seed_on_migrate
+
+        connect_seed_on_migrate()
