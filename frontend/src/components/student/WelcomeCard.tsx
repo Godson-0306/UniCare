@@ -2,7 +2,7 @@
 
 import { User } from "lucide-react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+
 import { Button } from "@/components/ui/button";
 
 interface Props {
@@ -17,38 +17,36 @@ interface Props {
 
 export default function WelcomeCard({ fullName, matric, lastVisit, summary, department, faculty, level }: Props) {
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex items-start justify-between gap-4 p-6 pb-2">
-        <div className="flex items-center gap-4">
-          <div className="grid h-14 w-14 place-items-center rounded-lg bg-teal-50 text-teal-700">
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-6 sm:px-6">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start gap-4">
+          <div className="grid h-14 w-14 place-items-center rounded-xl bg-teal-50 text-teal-700">
             <User className="h-7 w-7" />
           </div>
           <div>
-            <CardTitle className="text-xl">{fullName ?? "Student"}</CardTitle>
-            <CardDescription className="text-sm text-slate-500">{matric ?? "—"}</CardDescription>
-            <div className="mt-1 text-xs text-slate-600">
-              {department && <span>{department}</span>}
-              {faculty && <span className="ml-2">• {faculty}</span>}
-              {level && <span className="ml-2">• Level {level}</span>}
-            </div>
+            <p className="font-display text-2xl font-semibold tracking-tight text-slate-900">{fullName ?? "Student"}</p>
+            <p className="mt-1 text-sm text-[var(--muted)]">{matric ?? "—"}</p>
+            <p className="mt-2 text-xs text-slate-600">
+              {[department, faculty, level ? `Level ${level}` : null].filter(Boolean).join(" · ")}
+            </p>
+            <p className="mt-3 max-w-xl text-sm text-slate-700">{summary ?? "No health summary available."}</p>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-slate-600">Last visit</p>
-          <p className="text-base font-semibold text-slate-900">{lastVisit ?? "No recent visits"}</p>
+        <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col lg:items-end">
+          <div className="text-left lg:text-right">
+            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Last visit</p>
+            <p className="text-sm font-semibold text-slate-900">{lastVisit ?? "No recent visits"}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm">
+              <Link href="/student/medical-history">Medical history</Link>
+            </Button>
+            <Button variant="secondary" asChild size="sm">
+              <Link href="/student/contact">Contact centre</Link>
+            </Button>
+          </div>
         </div>
-      </CardHeader>
-      <CardContent className="flex items-center justify-between gap-6 p-6 pt-0">
-        <div className="max-w-lg text-sm text-slate-700">{summary ?? "No health summary available."}</div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Button asChild>
-            <Link href="/student/medical-history">View Medical History</Link>
-          </Button>
-          <Button variant="secondary" asChild>
-            <Link href="/student/contact">Contact Centre</Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
