@@ -1,0 +1,24 @@
+name: Record Render Deployment
+on:
+  push:
+    branches:
+      - main # change to your default branch if it isn't main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub Deployment
+        uses: chrnorm/deployment-action@v2
+        id: deployment
+        with:
+          token: '${{ github.token }}'
+          environment: production
+
+      - name: Update Deployment Status to Success
+        uses: chrnorm/deployment-status-action@v2
+        with:
+          token: '${{ github.token }}'
+          target_url: 'https://unicare-frontend-axyh.onrender.com'
+          state: 'success'
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
