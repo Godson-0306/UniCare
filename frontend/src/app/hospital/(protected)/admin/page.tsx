@@ -1,92 +1,62 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { AdminShell } from "@/components/admin/admin-shell";
+import { SectionHeader } from "@/components/admin/section-header";
 import { QueueMetricsRow } from "@/components/hospital/queue-chrome";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { apiClient } from "@/lib/api/client";
-import { HOSPITAL_NAV } from "@/lib/hospital/nav-config";
+import { Button } from "@/components/ui/button";
+import { getApiErrorMessage } from "@/lib/api/errors";
+import { adminApi } from "@/lib/api/admin";
 import { formatDateTime } from "@/lib/utils";
-import { useAuthStore } from "@/stores/auth-store";
+import type { AdminOverview } from "@/types/admin";
 
-type NamedCount = { name?: string; label?: string; count?: number; value?: number; total?: number };
-
-function asList(value: unknown): NamedCount[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => (item && typeof item === "object" ? (item as NamedCount) : { name: String(item) }));
-}
-
-function itemLabel(item: NamedCount) {
-  return item.name || item.label || "Item";
-}
-
-function itemValue(item: NamedCount) {
-  return item.count ?? item.value ?? item.total ?? 0;
-}
-
-function AnalyticsSection({ title, items }: { title: string; items: NamedCount[] }) {
-  return (
-    <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">
-      <h3 className="text-sm font-semibold capitalize text-slate-900">{title}</h3>
-      {items.length === 0 ? (
-        <p className="mt-3 text-sm text-[var(--muted)]">No data yet.</p>
-      ) : (
-        <ul className="mt-3 space-y-2">
-          {items.slice(0, 8).map((item, index) => (
-            <li key={`${itemLabel(item)}-${index}`} className="flex items-center justify-between gap-3 text-sm">
-              <span className="truncate text-slate-700">{itemLabel(item)}</span>
-              <Badge variant="secondary">{itemValue(item)}</Badge>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-export default function HospitalAdminPage() {
-  const { workstation, user } = useAuthStore();
-  const [analytics, setAnalytics] = useState<Record<string, unknown> | null>(null);
-  const [logs, setLogs] = useState<Record<string, unknown>[]>([]);
+export default function AdminOverviewPage() {
+  const [data, setData] = useState<AdminOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let active = true;
     async function load() {
       setLoading(true);
       setError("");
       try {
-        const [analyticsRes, logsRes] = await Promise.all([
-          apiClient.get("/audit/analytics/"),
-          apiClient.get("/audit/logs/"),
-        ]);
-        if (analyticsRes.data.success) setAnalytics(analyticsRes.data.data);
-        if (logsRes.data.success) setLogs(logsRes.data.data);
-      } catch {
-        setAnalytics(null);
-        setLogs([]);
-        setError("Unable to load administration analytics right now.");
+        const overview = await adminApi.overview();
+        if (active) setData(overview);
+      } catch (err) {
+        if (active) {
+          setData(null);
+          setError(getApiErrorMessage(err, "Unable to load admin overview."));
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
-
     void load();
+    const timer = window.setInterval(() => void load(), 30000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
-  const totals = (analytics?.totals as Record<string, number> | undefined) ?? {};
-  const metricItems = Object.entries(totals).map(([key, value]) => ({
-    label: key.replaceAll("_", " "),
-    value: String(value),
-  }));
+  const metrics = data
+    ? [
+        { label: "Active visits", value: String(data.active_visits) },
+        { label: "Open emergencies", value: String(data.open_emergencies_count) },
+        { label: "Today appointments", value: String(data.todays_appointments) },
+        {
+          label: "Workstations online",
+          value: `${data.workstations_online}/${data.workstations_total}`,
+        },
+      ]
+    : [];
 
   return (
-    <DashboardShell
-      title="Administration"
-      subtitle={`System oversight · ${workstation?.station_name ?? user?.username}`}
-      navItems={HOSPITAL_NAV[user?.role ?? "admin"]}
-    >
+    <AdminShell title="Administration" subtitle="Command center for clinic operations">
       <div className="space-y-6">
         {error ? (
           <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
@@ -94,61 +64,87 @@ export default function HospitalAdminPage() {
           </p>
         ) : null}
 
-        {loading ? (
+        {loading && !data ? (
           <div className="h-24 animate-pulse rounded-xl bg-slate-200/70" aria-busy="true" />
-        ) : metricItems.length > 0 ? (
-          <QueueMetricsRow items={metricItems.slice(0, 5)} />
         ) : (
-          <p className="rounded-md border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-500">
-            No analytics totals available yet.
-          </p>
+          <QueueMetricsRow items={metrics} />
         )}
 
-        <div>
-          <h2 className="font-display text-xl font-semibold text-slate-900">Operational summaries</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            Visits, diagnostics, pharmacy, and emergency patterns across the clinic.
-          </p>
-          <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            {(
-              [
-                ["most_common_diagnoses", "Most common diagnoses"],
-                ["pharmacy_usage_trends", "Pharmacy usage trends"],
-                ["lab_test_frequency", "Lab test frequency"],
-                ["emergency_case_frequency", "Emergency case frequency"],
-                ["doctor_workload_distribution", "Doctor workload distribution"],
-              ] as const
-            ).map(([key, title]) => (
-              <AnalyticsSection key={key} title={title} items={asList(analytics?.[key])} />
-            ))}
-          </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+            <SectionHeader title="Queue depths" description="Waiting and in-progress counts by stage." />
+            <ul className="space-y-2">
+              {Object.entries(data?.queue_by_stage ?? {}).length === 0 ? (
+                <li className="text-sm text-slate-500">No active queue entries.</li>
+              ) : (
+                Object.entries(data?.queue_by_stage ?? {}).map(([stage, counts]) => (
+                  <li key={stage} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="capitalize text-slate-700">{stage.replaceAll("_", " ")}</span>
+                    <span className="text-slate-500">
+                      {counts.waiting} waiting · {counts.in_progress} active
+                    </span>
+                  </li>
+                ))
+              )}
+            </ul>
+            <Button asChild variant="outline" size="sm" className="mt-4">
+              <Link href="/hospital/admin/ops">Open live ops</Link>
+            </Button>
+          </section>
+
+          <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
+            <SectionHeader title="Open emergencies" description="Events still triggered or dispatched." />
+            <ul className="divide-y divide-[var(--border)]">
+              {(data?.open_emergencies ?? []).length === 0 ? (
+                <li className="py-2 text-sm text-slate-500">No open emergencies.</li>
+              ) : (
+                data?.open_emergencies.map((event) => (
+                  <li key={event.id} className="py-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-slate-900">{event.student}</p>
+                      <Badge variant="secondary">{event.status}</Badge>
+                    </div>
+                    <p className="mt-1 text-slate-600">{event.description || "No description"}</p>
+                    <p className="mt-1 text-xs text-slate-400">{formatDateTime(event.created_at)}</p>
+                  </li>
+                ))
+              )}
+            </ul>
+            <Button asChild variant="outline" size="sm" className="mt-4">
+              <Link href="/hospital/admin/emergencies">Manage emergencies</Link>
+            </Button>
+          </section>
         </div>
 
         <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)]">
           <div className="border-b border-[var(--border)] px-5 py-4">
-            <h2 className="font-display text-xl font-semibold text-slate-900">Audit logs</h2>
-            <p className="text-sm text-[var(--muted)]">Immutable activity trail for patient and workstation access</p>
+            <SectionHeader title="Recent audit" description="Latest immutable activity across the clinic." />
           </div>
           <ul className="divide-y divide-[var(--border)]">
-            {logs.length === 0 ? (
+            {(data?.recent_audit ?? []).length === 0 ? (
               <li className="px-5 py-6 text-sm text-slate-500">No audit events yet.</li>
             ) : (
-              logs.slice(0, 25).map((log) => (
-                <li key={String(log.id)} className="px-5 py-4 text-sm">
+              data?.recent_audit.map((log) => (
+                <li key={log.id} className="px-5 py-4 text-sm">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-slate-900">{String(log.action)}</p>
-                    <Badge variant="secondary">{String(log.entity_type)}</Badge>
+                    <p className="font-medium text-slate-900">{log.action}</p>
+                    <Badge variant="secondary">{log.entity_type}</Badge>
                   </div>
                   <p className="mt-1 text-slate-600">
-                    Actor: {String(log.performed_by ?? "system")} · Workstation: {String(log.workstation_name ?? "-")}
+                    Actor: {log.performed_by ?? "system"} · Workstation: {log.workstation_name || "-"}
                   </p>
-                  <p className="mt-1 text-xs text-slate-400">{formatDateTime(String(log.created_at))}</p>
+                  <p className="mt-1 text-xs text-slate-400">{formatDateTime(log.created_at)}</p>
                 </li>
               ))
             )}
           </ul>
+          <div className="px-5 py-4">
+            <Button asChild variant="outline" size="sm">
+              <Link href="/hospital/admin/audit">View full audit trail</Link>
+            </Button>
+          </div>
         </section>
       </div>
-    </DashboardShell>
+    </AdminShell>
   );
 }
