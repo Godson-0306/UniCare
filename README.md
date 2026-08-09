@@ -70,46 +70,37 @@ Stop any old `npm run dev` / `runserver` terminals before running `npm run dev` 
 
 Hospital API calls require header `X-Hospital-Access-Token` (set in `.env` / `NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN`).
 
-## Production hosting (Vercel frontend + Render API)
+## Production hosting (Render API + UI; Vercel optional)
 
-| Layer | Host | URL pattern |
-|-------|------|-------------|
-| Frontend (Next.js) | Vercel | `https://frontend-henna-ten-69.vercel.app` |
-| API + WebSockets | Render | `https://unicare-backend.onrender.com` |
-| Postgres + Redis | Render | provisioned by `render.yaml` |
+| Layer | Host | URL |
+|-------|------|-----|
+| Frontend (working) | Render | https://unicare-frontend-axyh.onrender.com |
+| API + WebSockets | Render | https://unicare-backend-r7y5.onrender.com |
+| Frontend (legacy) | Vercel | https://frontend-henna-ten-69.vercel.app — redeploy after setting env below |
 
-Browser calls stay same-origin on Vercel (`/api/v1/*`). The Next.js route handler proxies to Render using `BACKEND_INTERNAL_URL`. WebSockets connect directly to Render via `NEXT_PUBLIC_WS_URL`.
+Browser calls stay same-origin (`/api/v1/*`). The Next.js route handler proxies to Render using `BACKEND_INTERNAL_URL`. WebSockets connect directly to Render via `NEXT_PUBLIC_WS_URL`.
 
-### 1. Deploy backend on Render
+**Sign in now:** open https://unicare-frontend-axyh.onrender.com/login with `U2024001` / `student123`.
 
-1. Merge this repo (including `render.yaml`) to GitHub.
-2. Open the Blueprint deeplink:  
-   https://dashboard.render.com/blueprint/new?repo=https://github.com/Godson-0306/UniCare
-3. Apply the Blueprint (creates `unicare-backend`, `unicare-db`, `unicare-redis`).
-4. When prompted, set `HOSPITAL_ACCESS_SECRET` to a strong shared secret (you will reuse it on Vercel).
-5. After the first deploy is live, confirm health at `https://unicare-backend.onrender.com/api/v1/health/`.
+### Vercel (optional) — fix the old hostname
 
-### 2. Configure Vercel project env
-
-In the Vercel project that serves `frontend/` set:
+In the Vercel `frontend` project, set Production env vars and **Redeploy** (clear build cache):
 
 | Variable | Value |
 |----------|--------|
-| `BACKEND_INTERNAL_URL` | `https://unicare-backend.onrender.com` |
+| `BACKEND_INTERNAL_URL` | `https://unicare-backend-r7y5.onrender.com` |
 | `NEXT_PUBLIC_API_URL` | `/api/v1` |
-| `NEXT_PUBLIC_WS_URL` | `wss://unicare-backend.onrender.com` |
-| `NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN` | same value as Render `HOSPITAL_ACCESS_SECRET` |
+| `NEXT_PUBLIC_WS_URL` | `wss://unicare-backend-r7y5.onrender.com` |
+| `NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN` | `085ceb8068750bccf73e8f76c71ef7de59092dada1f5f823` |
 
-Root Directory on Vercel must be `frontend`. Redeploy after saving env vars.
+Until that redeploy finishes, `frontend-henna-ten-69.vercel.app` will keep showing the old localhost 503.
 
-### 3. Smoke checks
+### Render services
 
-- UI: https://frontend-henna-ten-69.vercel.app
-- Proxied health: https://frontend-henna-ten-69.vercel.app/api/v1/health
-- Direct API health: https://unicare-backend.onrender.com/api/v1/health/
-- Sign-in with demo credentials after seeding (`python manage.py seed_demo_data` via Render shell if needed)
+- Backend dashboard: https://dashboard.render.com/web/srv-d9s9fgpt0dsc73bau410  
+- Frontend dashboard: https://dashboard.render.com/web/srv-d9sa8jn40ujc73ct9880  
 
-Free Render web services spin down after inactivity; the first request after idle can take ~30–60s.
+Free instances spin down after inactivity; the first request after idle can take ~30–60s.
 
 ## Docker (PostgreSQL + Redis)
 
