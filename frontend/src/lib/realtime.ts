@@ -54,7 +54,11 @@ export function getNotificationsWebSocketUrl() {
 
   return buildNotificationsWebSocketUrl({
     accessToken: useAuthStore.getState().tokens?.access,
-    explicitUrl: process.env.NEXT_PUBLIC_WS_URL,
+    explicitUrl:
+      process.env.NEXT_PUBLIC_WS_URL ||
+      (process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.VERCEL
+        ? "wss://unicare-backend-r7y5.onrender.com"
+        : undefined),
     apiUrl: process.env.NEXT_PUBLIC_API_URL,
     nodeEnv: process.env.NODE_ENV,
     location: window.location,

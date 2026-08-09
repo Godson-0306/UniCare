@@ -1,9 +1,16 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = (process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const BACKEND_URL = (
+  process.env.BACKEND_INTERNAL_URL ??
+  (process.env.VERCEL ? "https://unicare-backend-r7y5.onrender.com" : "http://127.0.0.1:8000")
+).replace(/\/$/, "");
 const HOSPITAL_TOKEN =
-  process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ??
-  (process.env.NODE_ENV === "development" ? "change-hospital-access-secret" : "");
+  process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ||
+  (process.env.VERCEL
+    ? "085ceb8068750bccf73e8f76c71ef7de59092dada1f5f823"
+    : process.env.NODE_ENV === "development"
+      ? "change-hospital-access-secret"
+      : "");
 export const HOSPITAL_PREFIXES = ["reception", "nurse", "doctor", "pharmacy", "lab", "emergency", "appointments", "audit"];
 
 function unavailableResponse() {
