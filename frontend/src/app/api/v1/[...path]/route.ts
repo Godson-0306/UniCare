@@ -1,14 +1,22 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:8000";
+const BACKEND_URL = (process.env.BACKEND_INTERNAL_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 const HOSPITAL_TOKEN =
   process.env.NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN ??
   (process.env.NODE_ENV === "development" ? "change-hospital-access-secret" : "");
 export const HOSPITAL_PREFIXES = ["reception", "nurse", "doctor", "pharmacy", "lab", "emergency", "appointments", "audit"];
 
+function unavailableResponse() {
+  const message =
+    process.env.NODE_ENV === "production"
+      ? "API server unavailable. Check BACKEND_INTERNAL_URL and the Render backend service."
+      : "API server unavailable. Run npm run dev from the project root to start backend + frontend.";
+  return NextResponse.json({ success: false, error: { message } }, { status: 503 });
+}
+
 async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   const subPath = pathSegments.join("/");
-  const target = new URL(`/api/v1/${subPath}/`, BACKEND_URL);
+  const target = new URL(`/api/v1/${subPath}/`, `${BACKEND_URL}/`);
   target.search = request.nextUrl.search;
 
   const headers = new Headers();
@@ -21,6 +29,9 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
   if (!hospitalToken && HOSPITAL_TOKEN && HOSPITAL_PREFIXES.includes(pathSegments[0] ?? "")) {
     headers.set("x-hospital-access-token", HOSPITAL_TOKEN);
   }
+  // Prefer the edge client IP when present so backend audit logs stay useful.
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) headers.set("x-forwarded-for", forwardedFor);
 
   const hasBody = !["GET", "HEAD"].includes(request.method);
   const body = hasBody ? await request.arrayBuffer() : undefined;
@@ -32,17 +43,10 @@ async function proxyRequest(request: NextRequest, pathSegments: string[]) {
       headers,
       body,
       cache: "no-store",
+      redirect: "manual",
     });
   } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          message: "API server unavailable. Run npm run dev from the project root to start backend + frontend.",
-        },
-      },
-      { status: 503 }
-    );
+    return unavailableResponse();
   }
 
   const responseHeaders = new Headers();

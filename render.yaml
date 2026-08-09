@@ -14,23 +14,34 @@ services:
     rootDir: backend
     buildCommand: bash build.sh
     startCommand: python manage.py migrate && daphne -b 0.0.0.0 -p $PORT config.asgi:application
+    healthCheckPath: /api/v1/health/
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.8"
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.production
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
         value: "False"
+      - key: SECURE_SSL_REDIRECT
+        value: "False"
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"
+        value: ".onrender.com,unicare-backend.onrender.com"
       - key: CSRF_TRUSTED_ORIGINS
         value: "https://*.onrender.com,https://frontend-henna-ten-69.vercel.app,https://frontend-godson-0306s-projects.vercel.app,https://frontend-godson-0306-godson-0306s-projects.vercel.app"
       - key: CORS_ALLOWED_ORIGINS
         value: "https://frontend-henna-ten-69.vercel.app,https://frontend-godson-0306s-projects.vercel.app,https://frontend-godson-0306-godson-0306s-projects.vercel.app"
       - key: FRONTEND_URL
         value: "https://frontend-henna-ten-69.vercel.app"
+      # Cloud BFF (Vercel) injects the hospital token; IP ranges alone cannot cover Vercel egress.
+      - key: HOSPITAL_NETWORK_ENFORCEMENT
+        value: "False"
+      - key: HOSPITAL_ALLOWED_IP_RANGES
+        value: "0.0.0.0/0,::/0"
+      # Set the same value on Vercel as NEXT_PUBLIC_HOSPITAL_ACCESS_TOKEN.
       - key: HOSPITAL_ACCESS_SECRET
-        generateValue: true
+        sync: false
       - key: DATABASE_URL
         fromDatabase:
           name: unicare-db
