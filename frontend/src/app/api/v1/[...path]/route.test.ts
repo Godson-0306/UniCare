@@ -13,6 +13,7 @@ describe("API proxy hospital prefixes", () => {
       "emergency",
       "appointments",
       "audit",
+      "admin",
     ]);
   });
 });

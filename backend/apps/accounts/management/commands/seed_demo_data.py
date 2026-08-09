@@ -71,3 +71,17 @@ class Command(BaseCommand):
             admin.set_password("admin123")
             admin.save()
             self.stdout.write(self.style.SUCCESS("Created admin / admin123"))
+
+        super_admin, created = User.objects.get_or_create(
+            username="superadmin",
+            defaults={
+                "role": Role.SUPER_ADMIN,
+                "account_type": "personal",
+                "is_staff": True,
+                "is_superuser": True,
+            },
+        )
+        if created:
+            super_admin.set_password("superadmin123")
+            super_admin.save()
+            self.stdout.write(self.style.SUCCESS("Created superadmin / superadmin123"))

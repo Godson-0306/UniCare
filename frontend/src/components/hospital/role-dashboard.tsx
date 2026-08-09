@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiClient } from "@/lib/api/client";
 import { HOSPITAL_NAV } from "@/lib/hospital/nav-config";
 import { ROLE_LABELS } from "@/lib/constants/roles";
@@ -29,6 +28,92 @@ interface RoleDashboardProps {
   description: string;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function displayValue(value: unknown) {
+  if (value == null || value === "") return "—";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value);
+  return null;
+}
+
+function FeedItemSummary({ item }: { item: Record<string, unknown> }) {
+  const title =
+    displayValue(item.student_name) ||
+    displayValue(item.full_name) ||
+    displayValue(item.visit_number) ||
+    displayValue(item.event_type) ||
+    displayValue(item.status) ||
+    "Queue item";
+  const subtitle =
+    [
+      displayValue(item.matric_number),
+      displayValue(item.priority),
+      displayValue(item.status),
+      displayValue(item.queue_position) ? `Pos ${item.queue_position}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Live feed entry";
+
+  const meta: Array<{ label: string; value: string }> = [
+    { label: "Visit", value: displayValue(item.visit_number) ?? "" },
+    { label: "Patient", value: displayValue(item.student_name || item.full_name) ?? "" },
+    { label: "Matric", value: displayValue(item.matric_number) ?? "" },
+    { label: "Priority", value: displayValue(item.priority) ?? "" },
+    { label: "Status", value: displayValue(item.status) ?? "" },
+    {
+      label: "Created",
+      value: (() => {
+        const raw = displayValue(item.created_at || item.queued_at || item.registered_at);
+        return raw && (raw.includes("T") || raw.includes("-")) ? formatDateTime(raw) : raw ?? "";
+      })(),
+    },
+  ].filter((entry) => entry.value);
+
+  return (
+    <div className="space-y-2 py-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-sm font-semibold text-slate-900">{title}</p>
+        {displayValue(item.priority) ? <Badge variant="secondary">{String(item.priority)}</Badge> : null}
+      </div>
+      <p className="text-xs text-[var(--muted)]">{subtitle}</p>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+        {meta.map((entry) => (
+          <span key={entry.label}>
+            <span className="font-semibold text-slate-500">{entry.label}: </span>
+            {entry.value}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AlertSummary({ event, data }: { event: string; data: Record<string, unknown> }) {
+  const label = event.replaceAll(".", " · ");
+  const detail =
+    displayValue(data.message) ||
+    displayValue(data.student_name) ||
+    displayValue(data.visit_number) ||
+    displayValue(data.status) ||
+    "Realtime update received";
+
+  return (
+    <div className="rounded-lg border border-[var(--border)] px-3 py-3 text-sm">
+      <div className="mb-1 flex items-center gap-2 font-medium text-slate-900">
+        {event.startsWith("emergency.") ? (
+          <Siren className="h-4 w-4 text-red-600" />
+        ) : (
+          <Bell className="h-4 w-4 text-teal-600" />
+        )}
+        <span className="capitalize">{label}</span>
+      </div>
+      <p className="text-xs text-slate-600">{detail}</p>
+    </div>
+  );
+}
+
 export function RoleDashboard({ role, title, description }: RoleDashboardProps) {
   const { user, workstation } = useAuthStore();
   const [queue, setQueue] = useState<Record<string, unknown>[]>([]);
@@ -44,7 +129,7 @@ export function RoleDashboard({ role, title, description }: RoleDashboardProps) 
       .get(endpoint)
       .then((res) => {
         if (res.data.success) {
-          setQueue(Array.isArray(res.data.data) ? res.data.data : []);
+          setQueue(Array.isArray(res.data.data) ? res.data.data.map(asRecord) : []);
         }
       })
       .catch(() => setError("Connect to the API backend to load live queue data."));
@@ -104,70 +189,56 @@ export function RoleDashboard({ role, title, description }: RoleDashboardProps) 
       navItems={navItems}
     >
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>{ROLE_LABELS[role]} Workstation</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+          <h2 className="font-display text-xl font-semibold text-slate-900">{ROLE_LABELS[role]} workstation</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">{description}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
             <Badge>{workstation?.station_code ?? "personal"}</Badge>
             <Badge variant="secondary">Visit-centered workflow</Badge>
             <Badge variant="secondary">Audited actions</Badge>
-          </CardContent>
-        </Card>
+          </div>
+        </section>
 
-        {endpoint && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Live Queue / Feed</CardTitle>
-              <CardDescription>{queue.length} item(s)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {error && <p className="text-sm text-amber-700">{error}</p>}
-              {!error && queue.length === 0 && (
-                <p className="text-sm text-slate-500">Queue is empty or awaiting patient flow.</p>
-              )}
-              <ul className="divide-y divide-slate-100">
-                {queue.slice(0, 10).map((item, idx) => (
-                  <li key={idx} className="py-3 text-sm">
-                    <pre className="overflow-x-auto whitespace-pre-wrap text-xs text-slate-600">
-                      {JSON.stringify(item, null, 2)}
-                    </pre>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        )}
-
-        {liveAlerts.length > 0 && (
-          <Card className="border-amber-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-4 w-4 text-amber-600" />
-                Live Alerts
-              </CardTitle>
-              <CardDescription>Real-time queue movement and emergency escalations</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {liveAlerts.map((alert, idx) => (
-                <div key={`${alert.event}-${idx}`} className="rounded-lg border border-slate-200 p-3 text-sm">
-                  <div className="mb-2 flex items-center gap-2 font-medium text-slate-900">
-                    {alert.event.startsWith("emergency.") ? (
-                      <Siren className="h-4 w-4 text-red-600" />
-                    ) : (
-                      <Bell className="h-4 w-4 text-teal-600" />
-                    )}
-                    <span>{alert.event}</span>
-                  </div>
-                  <pre className="overflow-x-auto whitespace-pre-wrap text-xs text-slate-600">
-                    {JSON.stringify(alert.data, null, 2)}
-                  </pre>
-                </div>
+        {endpoint ? (
+          <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+            <div className="mb-2 flex items-end justify-between gap-3">
+              <div>
+                <h3 className="text-base font-semibold text-slate-900">Live queue / feed</h3>
+                <p className="text-sm text-[var(--muted)]">{queue.length} item(s)</p>
+              </div>
+            </div>
+            {error ? (
+              <p className="text-sm text-amber-700" role="alert">
+                {error}
+              </p>
+            ) : null}
+            {!error && queue.length === 0 ? (
+              <p className="text-sm text-slate-500">Queue is empty or awaiting patient flow.</p>
+            ) : null}
+            <ul className="divide-y divide-[var(--border)]">
+              {queue.slice(0, 10).map((item, idx) => (
+                <li key={idx}>
+                  <FeedItemSummary item={item} />
+                </li>
               ))}
-            </CardContent>
-          </Card>
-        )}
+            </ul>
+          </section>
+        ) : null}
+
+        {liveAlerts.length > 0 ? (
+          <section className="rounded-xl border border-amber-200 bg-amber-50/40 px-5 py-4">
+            <h3 className="mb-1 flex items-center gap-2 text-base font-semibold text-slate-900">
+              <Bell className="h-4 w-4 text-amber-600" />
+              Live alerts
+            </h3>
+            <p className="mb-3 text-sm text-[var(--muted)]">Real-time queue movement and emergency escalations</p>
+            <div className="space-y-3">
+              {liveAlerts.map((alert, idx) => (
+                <AlertSummary key={`${alert.event}-${idx}`} event={alert.event} data={alert.data} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <p className="text-xs text-slate-400">Session active · {formatDateTime(new Date())}</p>
       </div>

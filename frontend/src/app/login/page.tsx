@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { login, toAuthSession } from "@/lib/api/auth";
 import { getApiErrorMessage } from "@/lib/api/errors";
 import { loginSchema } from "@/lib/auth/schemas";
@@ -56,24 +59,22 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-50 via-white to-slate-50 p-4">
-      <div className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-6 shadow-lg">
-        <div className="mb-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-teal-600">UniCare</p>
-          <h1 className="mt-1 text-2xl font-semibold text-slate-900">Sign in</h1>
-          <p className="mt-1 text-sm text-slate-500">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden app-atmosphere p-4">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-teal-100/70 to-transparent" aria-hidden />
+      <div className="relative w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)]/95 p-8 shadow-sm backdrop-blur">
+        <div className="mb-8 text-center">
+          <p className="font-display text-4xl font-semibold tracking-tight text-[var(--brand-ink)]">UniCare</p>
+          <h1 className="mt-3 text-lg font-medium text-slate-700">Sign in to continue</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             Use your user ID and password. You will be taken to your dashboard automatically.
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <label htmlFor="identifier" className="text-sm font-medium text-slate-700">
-              User ID
-            </label>
-            <input
+            <Label htmlFor="identifier">User ID</Label>
+            <Input
               id="identifier"
-              className="flex h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-teal-500"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
               onKeyDown={(e) => {
@@ -89,13 +90,10 @@ export default function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium text-slate-700">
-              Password
-            </label>
-            <input
+            <Label htmlFor="password">Password</Label>
+            <Input
               id="password"
               type="password"
-              className="flex h-10 w-full rounded-lg border border-slate-200 px-3 text-sm outline-none focus:ring-2 focus:ring-teal-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => {
@@ -116,24 +114,16 @@ export default function LoginPage() {
             </p>
           ) : null}
 
-          <button
-            type="button"
-            onClick={() => void onSignIn()}
-            disabled={loading}
-            className="h-10 w-full rounded-lg bg-teal-600 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-          >
+          <Button type="button" className="w-full" onClick={() => void onSignIn()} disabled={loading}>
             {loading ? "Signing in..." : "Sign in"}
-          </button>
+          </Button>
         </div>
 
-        <div className="my-6 border-t border-slate-200" />
+        <div className="my-6 border-t border-[var(--border)]" />
 
-        <Link
-          href="/register"
-          className="flex h-10 w-full items-center justify-center rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50"
-        >
-          Create account
-        </Link>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/register">Create account</Link>
+        </Button>
       </div>
     </main>
   );

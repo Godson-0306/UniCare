@@ -1,35 +1,41 @@
 import Link from "next/link";
-import { Activity, Shield } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-slate-50">
-      <div className="mx-auto flex max-w-3xl flex-col items-center gap-10 px-4 py-20 text-center sm:px-6">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-widest text-teal-600">UniCare</p>
-          <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-            University Health Center
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-slate-600">
-            Secure access to your health records, appointments, and clinical services.
+    <main className="relative min-h-screen overflow-hidden hero-atmosphere text-white">
+      <div className="pointer-events-none absolute inset-0 hero-grid animate-unicare-fade" aria-hidden />
+      <div
+        className="pointer-events-none absolute -right-24 top-16 h-80 w-80 rounded-full bg-teal-300/20 blur-3xl animate-unicare-pulse-soft"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute -left-16 bottom-10 h-72 w-72 rounded-full bg-emerald-200/15 blur-3xl animate-unicare-pulse-soft delay-200"
+        aria-hidden
+      />
+
+      <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16 sm:px-10">
+        <div className="max-w-2xl">
+          <p className="font-display animate-unicare-rise text-5xl font-semibold tracking-tight text-white sm:text-7xl">
+            UniCare
           </p>
-        </div>
-
-        <Button asChild size="lg" className="min-w-[200px]">
-          <Link href="/login">Sign in</Link>
-        </Button>
-
-        <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-slate-500">
-          <span className="inline-flex items-center gap-2">
-            <Shield className="h-4 w-4 text-teal-600" />
-            Encrypted sign-in
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <Activity className="h-4 w-4 text-teal-600" />
-            Real-time care updates
-          </span>
+          <p className="mt-5 max-w-xl animate-unicare-rise delay-100 text-lg text-teal-50/90 sm:text-xl">
+            Secure access to campus health records, appointments, and clinical care.
+          </p>
+          <div className="mt-10 flex animate-unicare-rise delay-200 flex-wrap gap-3">
+            <Button asChild size="lg" className="min-w-[160px] bg-white text-teal-900 hover:bg-teal-50">
+              <Link href="/login">Sign in</Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="min-w-[160px] border-white/40 bg-transparent text-white hover:bg-white/10"
+            >
+              <Link href="/register">Create account</Link>
+            </Button>
+          </div>
         </div>
       </div>
     </main>

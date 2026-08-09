@@ -1,23 +1,121 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --primary: #0d9488;
+  --background: #f4f7f7;
+  --foreground: #0f1f24;
+  --surface: #ffffff;
+  --muted: #5b6b73;
+  --border: #d7e2e6;
+  --primary: #0f766e;
   --primary-foreground: #ffffff;
-  --font-geist-sans: Arial, Helvetica, sans-serif;
-  --font-geist-mono: "Courier New", Courier, monospace;
+  --accent: #0d9488;
+  --danger: #b91c1c;
+  --danger-foreground: #ffffff;
+  --brand-ink: #06352f;
+  --atmosphere-1: #d9f3ef;
+  --atmosphere-2: #eef6f5;
+  --atmosphere-3: #f7faf9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-brand-ink: var(--brand-ink);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-body), "Segoe UI", sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), Georgia, serif;
+}
+
+@keyframes unicare-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes unicare-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes unicare-pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.03);
+  }
+}
+
+.animate-unicare-rise {
+  animation: unicare-rise 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-unicare-fade {
+  animation: unicare-fade 900ms ease-out both;
+}
+
+.animate-unicare-pulse-soft {
+  animation: unicare-pulse-soft 3.6s ease-in-out infinite;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+.hero-atmosphere {
+  background:
+    radial-gradient(ellipse 80% 60% at 70% 20%, rgba(15, 118, 110, 0.28), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 15% 80%, rgba(13, 148, 136, 0.18), transparent 50%),
+    linear-gradient(135deg, #0b3d38 0%, #0f766e 42%, #134e4a 100%);
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 70% at 60% 40%, black, transparent);
+}
+
+.app-atmosphere {
+  background:
+    radial-gradient(ellipse 70% 40% at 100% 0%, var(--atmosphere-1), transparent 55%),
+    radial-gradient(ellipse 50% 35% at 0% 100%, var(--atmosphere-2), transparent 50%),
+    var(--background);
 }

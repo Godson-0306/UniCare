@@ -110,12 +110,14 @@ export default function RegisterPage() {
   ];
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-teal-50 via-white to-slate-50 p-4">
-      <Card className="w-full max-w-4xl border-slate-200 shadow-lg">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden app-atmosphere p-4">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-teal-100/70 to-transparent" aria-hidden />
+      <Card className="relative w-full max-w-4xl border-[var(--border)] shadow-sm">
         <CardHeader className="text-center">
-          <CardTitle>Create student account</CardTitle>
+          <p className="font-display text-4xl font-semibold tracking-tight text-[var(--brand-ink)]">UniCare</p>
+          <CardTitle className="mt-3 text-xl">Create student account</CardTitle>
           <CardDescription>
-            Register your UniCare student portal account. Verified medical conditions are doctor-controlled.
+            Register your student portal account. Verified medical conditions are doctor-controlled.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -149,7 +151,14 @@ export default function RegisterPage() {
               {loading ? "Submitting..." : "Create account"}
             </Button>
           </form>
-          {status && <p className={`text-sm ${status.toLowerCase().includes("successful") ? "text-teal-700" : "text-red-700"}`}>{status}</p>}
+          {status ? (
+            <p
+              className={`text-sm ${status.toLowerCase().includes("successful") ? "text-teal-700" : "text-red-700"}`}
+              role="alert"
+            >
+              {status}
+            </p>
+          ) : null}
           <Button type="button" variant="outline" className="w-full" asChild>
             <Link href="/login">Back to sign in</Link>
           </Button>

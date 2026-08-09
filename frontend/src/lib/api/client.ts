@@ -46,6 +46,7 @@ const HOSPITAL_PREFIXES = [
   "emergency/",
   "appointments/",
   "audit/",
+  "admin/",
 ];
 
 export function isHospitalPath(path: string) {

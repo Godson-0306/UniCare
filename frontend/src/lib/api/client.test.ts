@@ -12,6 +12,7 @@ describe("isHospitalPath", () => {
     expect(isHospitalPath("emergency/events/")).toBe(true);
     expect(isHospitalPath("appointments/")).toBe(true);
     expect(isHospitalPath("audit/logs/")).toBe(true);
+    expect(isHospitalPath("admin/overview/")).toBe(true);
   });
 
   it("does not mark student or auth routes as hospital routes", () => {

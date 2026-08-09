@@ -52,6 +52,10 @@ class IsAdminUser(HasRole):
     allowed_roles = (Role.ADMIN, Role.SUPER_ADMIN)
 
 
+class IsSuperAdmin(HasRole):
+    allowed_roles = (Role.SUPER_ADMIN,)
+
+
 class IsHospitalStaff(HasRole):
     allowed_roles = (
         Role.RECEPTIONIST,
